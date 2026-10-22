@@ -1,0 +1,14 @@
+{
+  "name": "califnco-assignment",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:mobile": "npm run --prefix apps/mobile start",
+    "start:admin": "npm run --prefix apps/admin dev",
+    "build:admin": "npm run --prefix apps/admin build"
+  }
+}

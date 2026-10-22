@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment and Secrets (CRITICAL: never commit credentials)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!*.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+*.apk
+*.aab
+*.keystore
+
+# Vite / React Admin build
+apps/admin/dist/
+apps/admin/dist-ssr/
+
+# Logs and Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sublime-project
+*.sublime-workspace
