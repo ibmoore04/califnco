@@ -1,98 +1,120 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import React from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  SafeAreaView,
+  useColorScheme,
+  StatusBar,
+} from 'react-native';
+import { Colors } from '@/constants/theme';
+import { useShop } from '@/context/ShopContext';
+import { HeaderBar } from '@/components/HeaderBar';
+import { CategoryFilter } from '@/components/CategoryFilter';
+import { SearchBarAndSort } from '@/components/SearchBarAndSort';
+import { ProductCard } from '@/components/ProductCard';
+import { ProductDetailModal } from '@/components/ProductDetailModal';
+import { CartView } from '@/components/CartView';
+import { OrdersView } from '@/components/OrdersView';
+import { ProfileView } from '@/components/ProfileView';
+import { FloatingBottomNav } from '@/components/FloatingBottomNav';
 
 export default function HomeScreen() {
+  const scheme = useColorScheme();
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const { activeTab, filteredProducts, searchQuery, selectedCategory } = useShop();
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
+      />
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      {/* Top Brand Header Bar */}
+      <HeaderBar />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      {/* Main Tab Screen Content */}
+      <View style={styles.contentContainer}>
+        {activeTab === 'catalogue' && (
+          <View style={styles.catalogueView}>
+            {/* Products List with Header */}
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ProductCard product={item} />}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={
+                <View>
+                  {/* Category Pill Filters */}
+                  <CategoryFilter />
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+                  {/* Search Input & Sort Trigger */}
+                  <SearchBarAndSort />
+                </View>
+              }
+              ListEmptyComponent={
+                <View style={styles.emptySearchBox}>
+                  <Text style={styles.emptySearchEmoji}>🔍</Text>
+                  <Text style={[styles.emptySearchTitle, { color: colors.text }]}>
+                    No products found
+                  </Text>
+                  <Text style={[styles.emptySearchSubtitle, { color: colors.textSecondary }]}>
+                    No items matched "{searchQuery}" in category "{selectedCategory}". Try clearing your search filters.
+                  </Text>
+                </View>
+              }
+            />
+
+            {/* Product Detail Modal */}
+            <ProductDetailModal />
+          </View>
+        )}
+
+        {activeTab === 'cart' && <CartView />}
+        {activeTab === 'orders' && <OrdersView />}
+        {activeTab === 'profile' && <ProfileView />}
+      </View>
+
+      {/* Persistent Docked Bottom Navigation */}
+      <FloatingBottomNav />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
+  contentContainer: {
+    flex: 1,
+  },
+  catalogueView: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  emptySearchBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
-  title: {
+  emptySearchEmoji: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  emptySearchTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  emptySearchSubtitle: {
+    fontSize: 13,
     textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    lineHeight: 18,
   },
 });

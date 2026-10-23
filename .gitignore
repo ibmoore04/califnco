@@ -18,6 +18,7 @@ node_modules/
 *firebase-adminsdk*.json
 *service-account*.json
 *serviceAccount*.json
+*google-services*.json
 
 # Expo / React Native
 .expo/

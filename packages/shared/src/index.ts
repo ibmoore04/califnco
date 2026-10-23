@@ -158,3 +158,5 @@ export const calculateOrderTotal = (
   const total = Math.round((subtotal + tax) * 100) / 100;
   return { subtotal, tax, total };
 };
+
+export { INITIAL_PRODUCTS } from './data/products';
