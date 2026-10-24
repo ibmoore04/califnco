@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Product,
   CartItem,
@@ -182,6 +183,50 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_PROFILE);
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
 
+  // Hydrate persistent state on mount
+  useEffect(() => {
+    const hydrateStorage = async () => {
+      try {
+        const savedOrders = await AsyncStorage.getItem('califnco_orders');
+        if (savedOrders) {
+          const parsed = JSON.parse(savedOrders);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setOrders(parsed);
+          }
+        }
+
+        const savedCart = await AsyncStorage.getItem('califnco_cart');
+        if (savedCart) {
+          const parsedCart = JSON.parse(savedCart);
+          if (Array.isArray(parsedCart)) {
+            setCart(parsedCart);
+          }
+        }
+
+        const savedProfile = await AsyncStorage.getItem('califnco_profile');
+        if (savedProfile) {
+          const parsedProfile = JSON.parse(savedProfile);
+          if (parsedProfile && parsedProfile.displayName) {
+            setUserProfile(parsedProfile);
+          }
+        }
+      } catch (err) {
+        console.warn('[Califnco Storage] Could not hydrate stored data:', err);
+      }
+    };
+    hydrateStorage();
+  }, []);
+
+  // Persist cart changes
+  useEffect(() => {
+    AsyncStorage.setItem('califnco_cart', JSON.stringify(cart)).catch(() => {});
+  }, [cart]);
+
+  // Persist profile changes
+  useEffect(() => {
+    AsyncStorage.setItem('califnco_profile', JSON.stringify(userProfile)).catch(() => {});
+  }, [userProfile]);
+
   // Filter & Sort Products
   const filteredProducts = useMemo(() => {
     return products
@@ -307,7 +352,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date().toISOString(),
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => {
+      const updated = [newOrder, ...prev];
+      AsyncStorage.setItem('califnco_orders', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
     clearCart();
     return newOrder;
   };

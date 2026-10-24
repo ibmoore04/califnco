@@ -1,4 +1,4 @@
-import { Product } from '../index';
+import type { Product } from '../index';
 
 export const INITIAL_PRODUCTS: Product[] = [
   // ==========================================

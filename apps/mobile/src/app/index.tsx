@@ -47,6 +47,28 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={
                 <View>
+                  {/* Hero Promotional Banner (Only on default view) */}
+                  {!searchQuery && selectedCategory === 'all' && (
+                    <View
+                      style={[
+                        styles.heroBanner,
+                        { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+                      ]}>
+                      <View style={styles.heroTextCol}>
+                        <View style={styles.heroTag}>
+                          <Text style={styles.heroTagText}>⚡ PURE WATER GUARANTEE</Text>
+                        </View>
+                        <Text style={styles.heroHeading}>
+                          Advanced RO & Alkaline Solutions
+                        </Text>
+                        <Text style={styles.heroSub}>
+                          Certified 0.0001-micron filtration with natural mineral enrichment.
+                        </Text>
+                      </View>
+                      <Text style={styles.heroDropEmoji}>💧</Text>
+                    </View>
+                  )}
+
                   {/* Category Pill Filters */}
                   <CategoryFilter />
 
@@ -116,5 +138,53 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  heroBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroTextCol: {
+    flex: 1,
+    marginRight: 12,
+  },
+  heroTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  heroTagText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroHeading: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  heroSub: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  heroDropEmoji: {
+    fontSize: 48,
   },
 });
