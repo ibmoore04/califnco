@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "products": {
+      ".read": true,
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "users": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid === $userId || auth.token.admin === true)",
+        ".write": "auth != null && (auth.uid === $userId || auth.token.admin === true)"
+      }
+    },
+    "orders": {
+      ".read": "auth != null",
+      "$orderId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || auth.token.admin === true)",
+        ".write": "auth != null && (!data.exists() || auth.token.admin === true)"
+      }
+    }
+  }
+}
