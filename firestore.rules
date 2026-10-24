@@ -11,11 +11,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Administrator privileges strictly verified via trusted Firebase Auth custom claims.
+    // Ordinary users cannot grant themselves admin privileges by editing Firestore documents.
     function isAdmin() {
-      return isAuthenticated() &&
-        (request.auth.token.admin == true ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      return isAuthenticated() && request.auth.token.admin == true;
     }
 
     // 1. PRODUCTS: Public catalog read; only authenticated administrators can mutate
@@ -25,13 +24,12 @@ service cloud.firestore {
     }
 
     // 2. USERS: User can read and manage their own profile document.
-    // Explicit security rule: Users CANNOT grant themselves 'admin' or modify their role.
-    // Administrators can update other user documents (e.g., verifying dealers).
+    // Users are strictly registered with 'customer' role.
+    // Only verified administrators (with custom claims) can update other user documents or assign elevated roles.
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       
-      allow create: if isOwner(userId) && 
-        (request.resource.data.role == 'customer' || isAdmin());
+      allow create: if isOwner(userId) && request.resource.data.role == 'customer';
       
       allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
         
@@ -52,10 +50,13 @@ service cloud.firestore {
     }
 
     // 4. DEALERS: Dealer applications can be created by authenticated applicant with 'pending' status.
+    // The dealer document ID and internal 'id' field must equal the applicant's Firebase Auth UID.
     // Review and status approvals restricted to Administrators.
     match /dealers/{dealerId} {
       allow read: if isOwner(dealerId) || isAdmin();
-      allow create: if isOwner(dealerId) && request.resource.data.status == 'pending';
+      allow create: if isOwner(dealerId) && 
+        request.resource.data.id == request.auth.uid &&
+        request.resource.data.status == 'pending';
       allow update, delete: if isAdmin();
     }
 
