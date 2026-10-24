@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Product,
@@ -9,6 +9,15 @@ import {
   ProductCategory,
   INITIAL_PRODUCTS,
 } from '@shared';
+import {
+  isFirebaseConfigured,
+  signInWithEmail,
+  signUpWithEmail,
+  signOutUser,
+  subscribeToAuthChanges,
+  syncOrderToFirestore,
+  formatFirebaseAuthError,
+} from '@/services/firebase';
 
 export type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'name';
 export type TabType = 'catalogue' | 'cart' | 'orders' | 'profile';
@@ -43,9 +52,26 @@ interface ShopContextType {
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
 
-  // Customer Profile
+  // Customer Profile & Authentication
   userProfile: UserProfile;
   updateProfile: (data: Partial<UserProfile>) => void;
+  isAuthenticated: boolean;
+  isFirebaseActive: boolean;
+  isAuthLoading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+    phone?: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
+
+  // Auth Modal Visibility
+  isAuthModalVisible: boolean;
+  setAuthModalVisible: (visible: boolean) => void;
 
   // Navigation
   activeTab: TabType;
@@ -142,7 +168,7 @@ const INITIAL_DEMO_ORDERS: Order[] = [
   },
 ];
 
-const INITIAL_PROFILE: UserProfile = {
+const INITIAL_DEMO_PROFILE: UserProfile = {
   uid: 'usr_cust_demo_01',
   displayName: 'Ibrahim Olatunde',
   email: 'customer@califnco.demo',
@@ -180,8 +206,18 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [orders, setOrders] = useState<Order[]>(INITIAL_DEMO_ORDERS);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_PROFILE);
+  const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_DEMO_PROFILE);
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
+
+  // Firebase Auth states
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthModalVisible, setAuthModalVisible] = useState<boolean>(false);
+
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
 
   // Hydrate persistent state on mount
   useEffect(() => {
@@ -208,6 +244,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsedProfile = JSON.parse(savedProfile);
           if (parsedProfile && parsedProfile.displayName) {
             setUserProfile(parsedProfile);
+            if (parsedProfile.isFirebaseAuth) {
+              setIsAuthenticated(true);
+            }
           }
         }
       } catch (err) {
@@ -215,6 +254,23 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     hydrateStorage();
+
+    // Listen to Firebase Auth state
+    if (isFirebaseConfigured) {
+      const unsubscribe = subscribeToAuthChanges((firebaseUser) => {
+        if (firebaseUser) {
+          setIsAuthenticated(true);
+          setUserProfile((prev) => ({
+            ...prev,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || prev.email,
+            displayName: firebaseUser.displayName || prev.displayName,
+            role: 'customer',
+          }));
+        }
+      });
+      return () => unsubscribe();
+    }
   }, []);
 
   // Persist cart changes
@@ -227,68 +283,161 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     AsyncStorage.setItem('califnco_profile', JSON.stringify(userProfile)).catch(() => {});
   }, [userProfile]);
 
+  // Firebase Authentication Actions
+  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      if (isFirebaseConfigured) {
+        const profile = await signInWithEmail(email, password);
+        setUserProfile(profile);
+        setIsAuthenticated(true);
+        await AsyncStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true }));
+        setIsAuthLoading(false);
+        return { success: true };
+      } else {
+        // Fallback demo login
+        const demoProfile: UserProfile = {
+          uid: `demo_user_${Date.now()}`,
+          email,
+          displayName: email.split('@')[0],
+          role: 'customer',
+          createdAt: new Date().toISOString(),
+        };
+        setUserProfile(demoProfile);
+        setIsAuthenticated(true);
+        await AsyncStorage.setItem('califnco_profile', JSON.stringify(demoProfile));
+        setIsAuthLoading(false);
+        return { success: true };
+      }
+    } catch (err: any) {
+      setIsAuthLoading(false);
+      const friendlyMessage = formatFirebaseAuthError(err);
+      setAuthError(friendlyMessage);
+      return { success: false, message: friendlyMessage };
+    }
+  };
+
+  const register = async (
+    email: string,
+    password: string,
+    displayName: string,
+    phone?: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      if (isFirebaseConfigured) {
+        const profile = await signUpWithEmail(email, password, displayName, phone);
+        setUserProfile(profile);
+        setIsAuthenticated(true);
+        await AsyncStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true }));
+        setIsAuthLoading(false);
+        return { success: true };
+      } else {
+        // Fallback demo registration
+        const demoProfile: UserProfile = {
+          uid: `demo_user_${Date.now()}`,
+          email,
+          displayName,
+          phone,
+          role: 'customer', // Locked to customer role
+          createdAt: new Date().toISOString(),
+        };
+        setUserProfile(demoProfile);
+        setIsAuthenticated(true);
+        await AsyncStorage.setItem('califnco_profile', JSON.stringify(demoProfile));
+        setIsAuthLoading(false);
+        return { success: true };
+      }
+    } catch (err: any) {
+      setIsAuthLoading(false);
+      const friendlyMessage = formatFirebaseAuthError(err);
+      setAuthError(friendlyMessage);
+      return { success: false, message: friendlyMessage };
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      if (isFirebaseConfigured) {
+        await signOutUser();
+      }
+    } catch (err) {
+      console.warn('[Califnco Auth] Sign out error:', err);
+    }
+    setIsAuthenticated(false);
+    setUserProfile(INITIAL_DEMO_PROFILE);
+    await AsyncStorage.removeItem('califnco_profile');
+  };
+
   // Filter & Sort Products
   const filteredProducts = useMemo(() => {
     return products
-      .filter((item) => {
+      .filter((product) => {
         const matchesCategory =
-          selectedCategory === 'all' || item.category === selectedCategory;
-        const query = searchQuery.trim().toLowerCase();
+          selectedCategory === 'all' || product.category === selectedCategory;
         const matchesSearch =
-          query === '' ||
-          item.name.toLowerCase().includes(query) ||
-          item.description.toLowerCase().includes(query) ||
-          Object.values(item.specifications).some((val) =>
-            val.toLowerCase().includes(query)
+          !searchQuery ||
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          Object.values(product.specifications).some((val) =>
+            val.toLowerCase().includes(searchQuery.toLowerCase())
           );
         return matchesCategory && matchesSearch;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price;
-        if (sortBy === 'price-desc') return b.price - a.price;
-        if (sortBy === 'rating') return (b.rating ?? 0) - (a.rating ?? 0);
-        if (sortBy === 'name') return a.name.localeCompare(b.name);
-        return 0; // 'featured' keeps curated order
+        switch (sortBy) {
+          case 'price-asc':
+            return a.price - b.price;
+          case 'price-desc':
+            return b.price - a.price;
+          case 'rating':
+            return (b.rating || 0) - (a.rating || 0);
+          case 'name':
+            return a.name.localeCompare(b.name);
+          case 'featured':
+          default:
+            return 0; // Natural sequence
+        }
       });
   }, [products, selectedCategory, searchQuery, sortBy]);
 
   // Cart Calculations
   const cartCount = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
+    return cart.reduce((total, item) => total + item.quantity, 0);
   }, [cart]);
 
   const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.pricePerUnit * item.quantity, 0);
+    return cart.reduce((total, item) => total + item.pricePerUnit * item.quantity, 0);
   }, [cart]);
 
+  // Standard Indian GST on electronics/water purifiers is 18%
   const taxAmount = useMemo(() => {
-    // 18% GST standard on water purifier appliances and spares
-    return Math.round(subtotal * 0.18 * 100) / 100;
+    return +(subtotal * 0.18).toFixed(2);
   }, [subtotal]);
 
   const totalAmount = useMemo(() => {
-    return Math.round((subtotal + taxAmount) * 100) / 100;
+    return +(subtotal + taxAmount).toFixed(2);
   }, [subtotal, taxAmount]);
 
   // Cart Operations
-  const addToCart = (product: Product, quantity = 1): { success: boolean; message: string } => {
+  const addToCart = (product: Product, quantity = 1) => {
     if (!product.inStock || product.stock <= 0) {
       return { success: false, message: 'Sorry, this product is currently out of stock.' };
     }
 
-    setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex((item) => item.product.id === product.id);
-      if (existingIndex > -1) {
-        const newCart = [...prevCart];
-        const newQty = newCart[existingIndex].quantity + quantity;
-        newCart[existingIndex] = {
-          ...newCart[existingIndex],
-          quantity: newQty,
-        };
-        return newCart;
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
       }
       return [
-        ...prevCart,
+        ...prev,
         {
           product,
           quantity,
@@ -320,7 +469,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart([]);
   };
 
-  // Place Order (Demo Mode)
+  // Place Order (Safe Demo & Firestore sync)
   const placeOrder = (
     shippingAddress: Address,
     paymentMethod: 'razorpay' | 'cod'
@@ -357,6 +506,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       AsyncStorage.setItem('califnco_orders', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
+
+    // Attempt non-blocking sync to Firestore
+    syncOrderToFirestore(newOrder).catch(() => {});
+
     clearCart();
     return newOrder;
   };
@@ -393,6 +546,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSelectedOrder,
         userProfile,
         updateProfile,
+        isAuthenticated,
+        isFirebaseActive: isFirebaseConfigured,
+        isAuthLoading,
+        authError,
+        clearAuthError,
+        login,
+        register,
+        logout,
+        isAuthModalVisible,
+        setAuthModalVisible,
         activeTab,
         setActiveTab,
       }}>

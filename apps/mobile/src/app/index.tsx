@@ -19,11 +19,19 @@ import { CartView } from '@/components/CartView';
 import { OrdersView } from '@/components/OrdersView';
 import { ProfileView } from '@/components/ProfileView';
 import { FloatingBottomNav } from '@/components/FloatingBottomNav';
+import { AuthModal } from '@/components/AuthModal';
 
 export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { activeTab, filteredProducts, searchQuery, selectedCategory } = useShop();
+  const {
+    activeTab,
+    filteredProducts,
+    searchQuery,
+    selectedCategory,
+    isAuthModalVisible,
+    setAuthModalVisible,
+  } = useShop();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -101,6 +109,12 @@ export default function HomeScreen() {
 
       {/* Persistent Docked Bottom Navigation */}
       <FloatingBottomNav />
+
+      {/* Firebase Authentication Modal */}
+      <AuthModal
+        visible={isAuthModalVisible}
+        onClose={() => setAuthModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

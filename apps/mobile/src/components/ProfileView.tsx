@@ -14,7 +14,16 @@ import { useShop } from '@/context/ShopContext';
 export const ProfileView: React.FC = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { userProfile, updateProfile, orders, setActiveTab } = useShop();
+  const {
+    userProfile,
+    updateProfile,
+    orders,
+    setActiveTab,
+    isAuthenticated,
+    isFirebaseActive,
+    logout,
+    setAuthModalVisible,
+  } = useShop();
 
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(userProfile.displayName);
@@ -46,11 +55,13 @@ export const ProfileView: React.FC = () => {
   };
 
   const initials = userProfile.displayName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase();
+    ? userProfile.displayName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase()
+    : 'CU';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -79,16 +90,58 @@ export const ProfileView: React.FC = () => {
             <View style={styles.badgeRow}>
               <View style={[styles.roleBadge, { backgroundColor: colors.primaryLight }]}>
                 <Text style={[styles.roleBadgeText, { color: colors.primary }]}>
-                  Verified Customer
+                  {isAuthenticated ? 'Firebase Customer' : 'Verified Customer'}
                 </Text>
               </View>
-              <View style={[styles.roleBadge, { backgroundColor: colors.successLight }]}>
-                <Text style={[styles.roleBadgeText, { color: colors.success }]}>
-                  Demo Mode Active
+              <View
+                style={[
+                  styles.roleBadge,
+                  { backgroundColor: isAuthenticated ? colors.successLight : colors.warningLight },
+                ]}>
+                <Text
+                  style={[
+                    styles.roleBadgeText,
+                    { color: isAuthenticated ? colors.success : colors.warning },
+                  ]}>
+                  {isAuthenticated ? 'Live Auth Active' : 'Demo Mode Active'}
                 </Text>
               </View>
             </View>
           </View>
+        </View>
+
+        {/* Authentication Action Card */}
+        <View
+          style={[
+            styles.authActionCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.authActionInfo}>
+            <Text style={[styles.authActionTitle, { color: colors.text }]}>
+              {isAuthenticated ? 'Active Califnco Session' : 'Califnco Account Sync'}
+            </Text>
+            <Text style={[styles.authActionSub, { color: colors.textSecondary }]}>
+              {isAuthenticated
+                ? `Signed in as ${userProfile.email}. Orders sync to cloud.`
+                : 'Sign in with Firebase to access saved orders and profile sync.'}
+            </Text>
+          </View>
+          {isAuthenticated ? (
+            <TouchableOpacity
+              style={[
+                styles.signOutBtn,
+                { borderColor: colors.danger, backgroundColor: colors.dangerLight },
+              ]}
+              onPress={logout}>
+              <Text style={[styles.signOutBtnText, { color: colors.danger }]}>Sign Out</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.signInBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setAuthModalVisible(true)}>
+              <Text style={styles.signInBtnText}>Sign In / Register</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Quick Stats Grid */}
@@ -418,6 +471,48 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     fontSize: 10,
+    fontWeight: '700',
+  },
+  authActionCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  authActionInfo: {
+    flex: 1,
+  },
+  authActionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  authActionSub: {
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  signInBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  signInBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  signOutBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  signOutBtnText: {
+    fontSize: 12,
     fontWeight: '700',
   },
   statsGrid: {

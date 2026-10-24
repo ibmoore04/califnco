@@ -1,6 +1,26 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  getAuth,
+  Auth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  updateProfile as updateFirebaseAuthProfile,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
+import {
+  getFirestore,
+  Firestore,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore';
+import { UserProfile, Order } from '@shared';
 
 /**
  * Califnco Firebase Client Configuration
@@ -59,3 +79,174 @@ export const getFirebaseStatus = () => ({
   hasAuth: auth !== null,
   hasFirestore: db !== null,
 });
+
+/**
+ * Parse user-friendly error messages from Firebase error codes
+ */
+export const formatFirebaseAuthError = (error: any): string => {
+  const code = error?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Invalid email or password. Please verify and try again.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email address already exists. Please sign in instead.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    case 'auth/too-many-requests':
+      return 'Too many unsuccessful attempts. Access temporarily disabled. Please reset password or try again later.';
+    default:
+      return error?.message || 'Authentication error. Please try again.';
+  }
+};
+
+/**
+ * Sign up a new customer with Firebase Auth and initialize their Firestore profile
+ * Role is strictly locked to 'customer' to prevent privilege escalation.
+ */
+export const signUpWithEmail = async (
+  email: string,
+  password: string,
+  displayName: string,
+  phone?: string
+): Promise<UserProfile> => {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured. Running in demo mode.');
+  }
+
+  const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  const user = userCredential.user;
+
+  // Update Auth profile display name
+  await updateFirebaseAuthProfile(user, {
+    displayName: displayName.trim(),
+  });
+
+  const profile: UserProfile = {
+    uid: user.uid,
+    email: user.email || email.trim(),
+    displayName: displayName.trim(),
+    role: 'customer', // Locked to customer - cannot self-grant admin
+    phone: phone?.trim(),
+    createdAt: new Date().toISOString(),
+  };
+
+  // Persist profile to Firestore if Firestore is active
+  if (db) {
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, profile, { merge: true });
+    } catch (fsErr) {
+      console.warn('[Califnco Firebase] Could not write user profile to Firestore:', fsErr);
+    }
+  }
+
+  return profile;
+};
+
+/**
+ * Sign in existing user with Firebase Auth and retrieve their profile
+ */
+export const signInWithEmail = async (email: string, password: string): Promise<UserProfile> => {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured. Running in demo mode.');
+  }
+
+  const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const user = userCredential.user;
+
+  let profile: UserProfile = {
+    uid: user.uid,
+    email: user.email || email.trim(),
+    displayName: user.displayName || email.split('@')[0],
+    role: 'customer',
+    createdAt: new Date().toISOString(),
+  };
+
+  // Attempt to fetch custom fields (address, phone, role) from Firestore
+  if (db) {
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const snapshot = await getDoc(userDocRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        profile = {
+          ...profile,
+          ...data,
+          uid: user.uid,
+          email: user.email || profile.email,
+        } as UserProfile;
+      }
+    } catch (fsErr) {
+      console.warn('[Califnco Firebase] Could not read user profile from Firestore:', fsErr);
+    }
+  }
+
+  return profile;
+};
+
+/**
+ * Sign out current Firebase user
+ */
+export const signOutUser = async (): Promise<void> => {
+  if (auth) {
+    await firebaseSignOut(auth);
+  }
+};
+
+/**
+ * Subscribe to Firebase Auth state changes
+ */
+export const subscribeToAuthChanges = (
+  onUserChanged: (user: User | null) => void
+): (() => void) => {
+  if (!auth) {
+    return () => {};
+  }
+  return onAuthStateChanged(auth, onUserChanged);
+};
+
+/**
+ * Sync order to Firestore if online & authenticated
+ */
+export const syncOrderToFirestore = async (order: Order): Promise<boolean> => {
+  if (!db || !auth || !auth.currentUser) {
+    return false;
+  }
+  try {
+    const orderDocRef = doc(db, 'orders', order.id);
+    await setDoc(orderDocRef, order);
+    console.log('[Califnco Firebase] Order synced to Firestore:', order.id);
+    return true;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Failed to sync order to Firestore:', err);
+    return false;
+  }
+};
+
+/**
+ * Fetch orders for authenticated user from Firestore
+ */
+export const fetchUserOrdersFromFirestore = async (userId: string): Promise<Order[]> => {
+  if (!db) {
+    return [];
+  }
+  try {
+    const ordersRef = collection(db, 'orders');
+    const q = query(ordersRef, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const orders: Order[] = [];
+    snapshot.forEach((docSnap) => {
+      orders.push(docSnap.data() as Order);
+    });
+    return orders;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error fetching orders from Firestore:', err);
+    return [];
+  }
+};
