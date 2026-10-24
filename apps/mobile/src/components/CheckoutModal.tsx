@@ -73,12 +73,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
     return Object.keys(errs).length === 0;
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
       const address: Address = {
         fullName: fullName.trim(),
         phone: phone.trim(),
@@ -88,10 +89,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
         postalCode: postalCode.trim(),
       };
 
-      const order = placeOrder(address, paymentMethod);
+      const order = await placeOrder(address, paymentMethod);
       setIsSubmitting(false);
       setConfirmedOrder(order);
-    }, 1200);
+    } catch (err) {
+      console.warn('[Checkout] Order submission error:', err);
+      setIsSubmitting(false);
+    }
   };
 
   const handleViewOrderHistory = () => {
@@ -168,7 +172,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
                 <View style={styles.summaryRow}>
                   <Text style={[styles.sumLabel, { color: colors.textSecondary }]}>Payment</Text>
                   <Text style={[styles.sumVal, { color: colors.text }]}>
-                    {confirmedOrder.paymentMethod === 'razorpay' ? 'Demo Test Mode (Paid)' : 'Cash on Delivery (Pending)'}
+                    {confirmedOrder.paymentMethod === 'razorpay' ? 'Demo Mode (Pending PAN Verification)' : 'Cash on Delivery (Pending)'}
                   </Text>
                 </View>
 
@@ -199,15 +203,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
           ) : (
             /* Checkout Form View */
             <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-              {/* Mandatory Demo Mode Warning Banner */}
+              {/* Transparent Gateway Status Banner */}
               <View style={[styles.demoBanner, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}>
-                <Text style={styles.demoBannerIcon}>🧪</Text>
+                <Text style={styles.demoBannerIcon}>⚡</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.demoBannerTitle, { color: colors.warning }]}>
-                    DEMO / TEST CHECKOUT MODE
+                    DEMO PAYMENT MODE (PAN VERIFICATION PENDING)
                   </Text>
                   <Text style={[styles.demoBannerText, { color: colors.warning }]}>
-                    This application operates in simulated test mode. No real payment will be charged, and test orders are saved to your local session history.
+                    Razorpay live activation is currently awaiting PAN verification. Online orders are safely registered in Demo / Pending status and synced to Firestore.
                   </Text>
                 </View>
               </View>
@@ -345,10 +349,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={[styles.paymentTitle, { color: colors.text }]}>
-                        💳 Razorpay Simulated UPI / Card (Test Mode)
+                        💳 Demo Online Payment (Pending PAN Verification)
                       </Text>
                       <Text style={[styles.paymentSub, { color: colors.textSecondary }]}>
-                        Instant test payment confirmation • Zero KYC
+                        Simulated authorization • Registered in Firestore with 'pending' status
                       </Text>
                     </View>
                   </View>

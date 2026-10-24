@@ -20,7 +20,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
-import { UserProfile, Order, Product } from '@shared';
+import { UserProfile, Order, Product, DealerProfile, ServiceBooking } from '@shared';
 
 /**
  * Califnco Firebase Client Configuration
@@ -268,6 +268,125 @@ export const fetchProductsFromFirestore = async (): Promise<Product[]> => {
     return products;
   } catch (err) {
     console.warn('[Califnco Firebase] Error fetching products from Firestore:', err);
+    return [];
+  }
+};
+
+/**
+ * Submit wholesale dealer application to Firestore
+ */
+export const submitDealerApplicationToFirestore = async (
+  dealerData: Omit<DealerProfile, 'id' | 'userId' | 'status' | 'appliedAt'>
+): Promise<DealerProfile | null> => {
+  if (!db || !auth || !auth.currentUser) {
+    return null;
+  }
+  const uid = auth.currentUser.uid;
+  const application: DealerProfile = {
+    id: uid,
+    userId: uid,
+    businessName: dealerData.businessName || dealerData.companyName || '',
+    companyName: dealerData.companyName || dealerData.businessName || '',
+    contactPerson: dealerData.contactPerson,
+    email: dealerData.email || auth.currentUser.email || '',
+    phone: dealerData.phone,
+    gstNumber: dealerData.gstNumber.toUpperCase(),
+    address: dealerData.address,
+    status: 'pending',
+    appliedAt: new Date().toISOString(),
+  };
+
+  try {
+    const dealerDocRef = doc(db, 'dealers', uid);
+    await setDoc(dealerDocRef, application);
+    console.log('[Califnco Firebase] Dealer application submitted:', uid);
+    return application;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error submitting dealer application:', err);
+    return null;
+  }
+};
+
+/**
+ * Fetch dealer profile / application status for user
+ */
+export const fetchDealerApplicationFromFirestore = async (
+  userId: string
+): Promise<DealerProfile | null> => {
+  if (!db) {
+    return null;
+  }
+  try {
+    const dealerDocRef = doc(db, 'dealers', userId);
+    const snapshot = await getDoc(dealerDocRef);
+    if (snapshot.exists()) {
+      return snapshot.data() as DealerProfile;
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error fetching dealer status:', err);
+    return null;
+  }
+};
+
+/**
+ * Create a new service booking in Firestore
+ */
+export const createServiceBookingInFirestore = async (
+  bookingData: Omit<ServiceBooking, 'id' | 'userId' | 'status' | 'createdAt' | 'updatedAt'>
+): Promise<ServiceBooking | null> => {
+  if (!db || !auth || !auth.currentUser) {
+    return null;
+  }
+  const uid = auth.currentUser.uid;
+  const bookingId = `SRV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const booking: ServiceBooking = {
+    id: bookingId,
+    userId: uid,
+    customerName: bookingData.customerName,
+    customerPhone: bookingData.customerPhone,
+    serviceType: bookingData.serviceType,
+    preferredDate: bookingData.preferredDate,
+    preferredTimeSlot: bookingData.preferredTimeSlot || '10:00 AM - 1:00 PM',
+    address: bookingData.address,
+    notes: bookingData.notes || '',
+    status: 'submitted',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    const serviceDocRef = doc(db, 'services', bookingId);
+    await setDoc(serviceDocRef, booking);
+    console.log('[Califnco Firebase] Service booking created:', bookingId);
+    return booking;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error creating service booking:', err);
+    return null;
+  }
+};
+
+/**
+ * Fetch service bookings for authenticated user
+ */
+export const fetchUserServiceBookingsFromFirestore = async (
+  userId: string
+): Promise<ServiceBooking[]> => {
+  if (!db) {
+    return [];
+  }
+  try {
+    const servicesRef = collection(db, 'services');
+    const q = query(servicesRef, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const bookings: ServiceBooking[] = [];
+    snapshot.forEach((docSnap) => {
+      bookings.push(docSnap.data() as ServiceBooking);
+    });
+    bookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return bookings;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error fetching service bookings:', err);
     return [];
   }
 };

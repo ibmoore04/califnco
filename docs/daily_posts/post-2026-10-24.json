@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-24",
+  "generatedAt": "2026-10-24T17:26:06.296Z",
+  "sourceEngine": "califnco-deterministic-engine",
+  "product": {
+    "id": "prod-aquapure-prime-15l",
+    "name": "Califnco AquaPure Prime 15L RO Purifier",
+    "price": 18499,
+    "wholesalePrice": 13999,
+    "imageUrl": "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80"
+  },
+  "content": {
+    "caption": "💧 PURE WATER, UNCOMPROMISED HEALTH | CALIFNCO AQUAPURE PRIME 15L RO PURIFIER\n\nDid you know tap water can carry unseen heavy metals, microplastics, and dissolved chemical solids? \n\nCalifnco brings medical-grade water purification right to your kitchen and workplace. The Califnco AquaPure Prime 15L RO Purifier delivers crisp, refreshing, 100% pure mineral water with certified 0.0001-micron multi-stage filtration.\n\n✨ KEY PERFORMANCE SPECS:\n• Filtration: RO + UV + UF + Alkaline Mineralizer (0.0001 micron)\n• Capacity: 15 Litres/Hour\n• TdsReduction: Up to 2000 ppm TDS inlet support\n• Warranty: 1 Year Comprehensive On-Site Warranty\n\n💎 SPECIAL PROMOTION:\n• Retail: ₹18,499 (Free Standard Installation & TDS Test)\n• Verified Dealers & Bulk Buyers: Wholesale pricing starting at ₹13,999/unit!\n\n📲 Order now directly on the Califnco Mobile App, or book a free certified technician doorstep visit today.\n\n1800-420-PURE | support@califnco.com | Bengaluru, India",
+    "hashtags": [
+      "#Califnco",
+      "#PureWater",
+      "#ROWaterPurifier",
+      "#CleanWaterEveryDay",
+      "#HealthyLiving",
+      "#AlkalineWater",
+      "#WaterPurification",
+      "#SafeDrinkingWater",
+      "#BengaluruWater",
+      "#HomeWellness"
+    ],
+    "fullText": "💧 PURE WATER, UNCOMPROMISED HEALTH | CALIFNCO AQUAPURE PRIME 15L RO PURIFIER\n\nDid you know tap water can carry unseen heavy metals, microplastics, and dissolved chemical solids? \n\nCalifnco brings medical-grade water purification right to your kitchen and workplace. The Califnco AquaPure Prime 15L RO Purifier delivers crisp, refreshing, 100% pure mineral water with certified 0.0001-micron multi-stage filtration.\n\n✨ KEY PERFORMANCE SPECS:\n• Filtration: RO + UV + UF + Alkaline Mineralizer (0.0001 micron)\n• Capacity: 15 Litres/Hour\n• TdsReduction: Up to 2000 ppm TDS inlet support\n• Warranty: 1 Year Comprehensive On-Site Warranty\n\n💎 SPECIAL PROMOTION:\n• Retail: ₹18,499 (Free Standard Installation & TDS Test)\n• Verified Dealers & Bulk Buyers: Wholesale pricing starting at ₹13,999/unit!\n\n📲 Order now directly on the Califnco Mobile App, or book a free certified technician doorstep visit today.\n\n1800-420-PURE | support@califnco.com | Bengaluru, India\n\n#Califnco #PureWater #ROWaterPurifier #CleanWaterEveryDay #HealthyLiving #AlkalineWater #WaterPurification #SafeDrinkingWater #BengaluruWater #HomeWellness"
+  },
+  "integrations": {
+    "instagram": {
+      "status": "blocked",
+      "reason": "Candidate Instagram account is currently blocked/banned by Meta. Running in truthful Dry-Run Staging mode.",
+      "metaGraphPayload": {
+        "endpoint_step1": "POST https://graph.facebook.com/v19.0/17841400000000000/media",
+        "body_step1": {
+          "image_url": "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80",
+          "caption": "💧 PURE WATER, UNCOMPROMISED HEALTH | CALIFNCO AQUAPURE PRIME 15L RO PURIFIER\n\nDid you know tap water can carry unseen heavy metals, microplastics, and dissolved chemical solids? \n\nCalifnco brings medical-grade water purification right to your kitchen and workplace. The Califnco AquaPure Prime 15L RO Purifier delivers crisp, refreshing, 100% pure mineral water with certified 0.0001-micron multi-stage filtration.\n\n✨ KEY PERFORMANCE SPECS:\n• Filtration: RO + UV + UF + Alkaline Mineralizer (0.0001 micron)\n• Capacity: 15 Litres/Hour\n• TdsReduction: Up to 2000 ppm TDS inlet support\n• Warranty: 1 Year Comprehensive On-Site Warranty\n\n💎 SPECIAL PROMOTION:\n• Retail: ₹18,499 (Free Standard Installation & TDS Test)\n• Verified Dealers & Bulk Buyers: Wholesale pricing starting at ₹13,999/unit!\n\n📲 Order now directly on the Califnco Mobile App, or book a free certified technician doorstep visit today.\n\n1800-420-PURE | support@califnco.com | Bengaluru, India\n\n#Califnco #PureWater #ROWaterPurifier #CleanWaterEveryDay #HealthyLiving #AlkalineWater #WaterPurification #SafeDrinkingWater #BengaluruWater #HomeWellness"
+        },
+        "endpoint_step2": "POST https://graph.facebook.com/v19.0/17841400000000000/media_publish",
+        "body_step2": {
+          "creation_id": "<CONTAINER_ID_FROM_STEP1>"
+        }
+      }
+    },
+    "whatsapp": {
+      "clickToShareUrl": "https://api.whatsapp.com/send?text=%F0%9F%92%A7%20PURE%20WATER%2C%20UNCOMPROMISED%20HEALTH%20%7C%20CALIFNCO%20AQUAPURE%20PRIME%2015L%20RO%20PURIFIER%0A%0ADid%20you%20know%20tap%20water%20can%20carry%20unseen%20heavy%20metals%2C%20microplastics%2C%20and%20dissolved%20chemical%20solids%3F%20%0A%0ACalifnco%20brings%20medical-grade%20water%20purification%20right%20to%20your%20kitchen%20and%20workplace.%20The%20Califnco%20AquaPure%20Prime%2015L%20RO%20Purifier%20delivers%20crisp%2C%20refreshing%2C%20100%25%20pure%20mineral%20water%20with%20certified%200.0001-micron%20multi-stage%20filtration.%0A%0A%E2%9C%A8%20KEY%20PERFORMANCE%20SPECS%3A%0A%E2%80%A2%20Filtration%3A%20RO%20%2B%20UV%20%2B%20UF%20%2B%20Alkaline%20Mineralizer%20(0.0001%20micron)%0A%E2%80%A2%20Capacity%3A%2015%20Litres%2FHour%0A%E2%80%A2%20TdsReduction%3A%20Up%20to%202000%20ppm%20TDS%20inlet%20support%0A%E2%80%A2%20Warranty%3A%201%20Year%20Comprehensive%20On-Site%20Warranty%0A%0A%F0%9F%92%8E%20SPECIAL%20PROMOTION%3A%0A%E2%80%A2%20Retail%3A%20%E2%82%B918%2C499%20(Free%20Standard%20Installation%20%26%20TDS%20Test)%0A%E2%80%A2%20Verified%20Dealers%20%26%20Bulk%20Buyers%3A%20Wholesale%20pricing%20starting%20at%20%E2%82%B913%2C999%2Funit!%0A%0A%F0%9F%93%B2%20Order%20now%20directly%20on%20the%20Califnco%20Mobile%20App%2C%20or%20book%20a%20free%20certified%20technician%20doorstep%20visit%20today.%0A%0A1800-420-PURE%20%7C%20support%40califnco.com%20%7C%20Bengaluru%2C%20India%0A%0A%23Califnco%20%23PureWater%20%23ROWaterPurifier%20%23CleanWaterEveryDay%20%23HealthyLiving%20%23AlkalineWater%20%23WaterPurification%20%23SafeDrinkingWater%20%23BengaluruWater%20%23HomeWellness",
+      "wahaPayload": {
+        "chatId": "status@broadcast",
+        "text": "💧 PURE WATER, UNCOMPROMISED HEALTH | CALIFNCO AQUAPURE PRIME 15L RO PURIFIER\n\nDid you know tap water can carry unseen heavy metals, microplastics, and dissolved chemical solids? \n\nCalifnco brings medical-grade water purification right to your kitchen and workplace. The Califnco AquaPure Prime 15L RO Purifier delivers crisp, refreshing, 100% pure mineral water with certified 0.0001-micron multi-stage filtration.\n\n✨ KEY PERFORMANCE SPECS:\n• Filtration: RO + UV + UF + Alkaline Mineralizer (0.0001 micron)\n• Capacity: 15 Litres/Hour\n• TdsReduction: Up to 2000 ppm TDS inlet support\n• Warranty: 1 Year Comprehensive On-Site Warranty\n\n💎 SPECIAL PROMOTION:\n• Retail: ₹18,499 (Free Standard Installation & TDS Test)\n• Verified Dealers & Bulk Buyers: Wholesale pricing starting at ₹13,999/unit!\n\n📲 Order now directly on the Califnco Mobile App, or book a free certified technician doorstep visit today.\n\n1800-420-PURE | support@califnco.com | Bengaluru, India\n\n#Califnco #PureWater #ROWaterPurifier #CleanWaterEveryDay #HealthyLiving #AlkalineWater #WaterPurification #SafeDrinkingWater #BengaluruWater #HomeWellness"
+      }
+    }
+  }
+}

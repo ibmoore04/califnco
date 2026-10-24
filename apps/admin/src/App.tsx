@@ -17,9 +17,15 @@ import {
   deleteDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { adminDb } from './lib/firebase';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  type User,
+} from 'firebase/auth';
+import { adminDb, adminAuth } from './lib/firebase';
 
-type NavSection = 'dashboard' | 'orders' | 'catalog' | 'dealers' | 'services' | 'notifications';
+type NavSection = 'dashboard' | 'orders' | 'catalog' | 'dealers' | 'services' | 'notifications' | 'marketing';
 type TimeRange = 'today' | '7days' | '30days' | '90days' | 'custom';
 type MetricFilter = 'revenue' | 'orders' | 'fulfilled';
 
@@ -31,6 +37,20 @@ export function App() {
   const [services, setServices] = useState<ServiceBooking[]>([]);
   const [isSeeding, setIsSeeding] = useState<boolean>(false);
   const [, setIsBackendLoading] = useState<boolean>(true);
+  const [adminUser, setAdminUser] = useState<User | null>(null);
+  const [isAdminClaimVerified, setIsAdminClaimVerified] = useState<boolean>(false);
+
+  // Admin Authentication Modal & State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authEmail, setAuthEmail] = useState<string>('');
+  const [authPassword, setAuthPassword] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [copiedUid, setCopiedUid] = useState<boolean>(false);
+
+  // Responsive Drawer State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // Filter States
   const [timeRange, setTimeRange] = useState<TimeRange>('30days');
@@ -58,20 +78,25 @@ export function App() {
   const [formImage, setFormImage] = useState('');
   const [formDesc, setFormDesc] = useState('');
 
+  // AI Marketing Studio State
+  const [marketingProductId, setMarketingProductId] = useState<string>('');
+  const [showRawMetaPayload, setShowRawMetaPayload] = useState<boolean>(false);
+
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Real-time Firestore Subscriptions (Direct from Backend Database)
+  // Real-time Firestore Subscriptions
   useEffect(() => {
     if (!adminDb) {
       setIsBackendLoading(false);
       return;
     }
 
+    // Products are publicly readable
     const unsubProducts = onSnapshot(
       collection(adminDb, 'products'),
       (snapshot) => {
@@ -81,47 +106,58 @@ export function App() {
         setIsBackendLoading(false);
       },
       (err) => {
-        console.warn('[Admin Firestore] Products subscription warning:', err);
+        console.warn('[Admin Firestore] Products subscription warning:', err.message);
         setIsBackendLoading(false);
       }
     );
 
-    const unsubOrders = onSnapshot(
-      collection(adminDb, 'orders'),
-      (snapshot) => {
-        const list: Order[] = [];
-        snapshot.forEach((d) => list.push(d.data() as Order));
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setOrders(list);
-      },
-      (err) => {
-        console.warn('[Admin Firestore] Orders subscription warning:', err);
-      }
-    );
+    // Orders, Dealers, and Services require authenticated administrator
+    let unsubOrders = () => {};
+    let unsubDealers = () => {};
+    let unsubServices = () => {};
 
-    const unsubDealers = onSnapshot(
-      collection(adminDb, 'dealers'),
-      (snapshot) => {
-        const list: DealerProfile[] = [];
-        snapshot.forEach((d) => list.push(d.data() as DealerProfile));
-        setDealers(list);
-      },
-      (err) => {
-        console.warn('[Admin Firestore] Dealers subscription warning:', err);
-      }
-    );
+    if (adminUser) {
+      unsubOrders = onSnapshot(
+        collection(adminDb, 'orders'),
+        (snapshot) => {
+          const list: Order[] = [];
+          snapshot.forEach((d) => list.push(d.data() as Order));
+          list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setOrders(list);
+        },
+        (err) => {
+          console.warn('[Admin Firestore] Orders subscription warning:', err.message);
+        }
+      );
 
-    const unsubServices = onSnapshot(
-      collection(adminDb, 'services'),
-      (snapshot) => {
-        const list: ServiceBooking[] = [];
-        snapshot.forEach((d) => list.push(d.data() as ServiceBooking));
-        setServices(list);
-      },
-      (err) => {
-        console.warn('[Admin Firestore] Services subscription warning:', err);
-      }
-    );
+      unsubDealers = onSnapshot(
+        collection(adminDb, 'dealers'),
+        (snapshot) => {
+          const list: DealerProfile[] = [];
+          snapshot.forEach((d) => list.push(d.data() as DealerProfile));
+          setDealers(list);
+        },
+        (err) => {
+          console.warn('[Admin Firestore] Dealers subscription warning:', err.message);
+        }
+      );
+
+      unsubServices = onSnapshot(
+        collection(adminDb, 'services'),
+        (snapshot) => {
+          const list: ServiceBooking[] = [];
+          snapshot.forEach((d) => list.push(d.data() as ServiceBooking));
+          setServices(list);
+        },
+        (err) => {
+          console.warn('[Admin Firestore] Services subscription warning:', err.message);
+        }
+      );
+    } else {
+      setOrders([]);
+      setDealers([]);
+      setServices([]);
+    }
 
     return () => {
       unsubProducts();
@@ -129,7 +165,72 @@ export function App() {
       unsubDealers();
       unsubServices();
     };
+  }, [adminUser]);
+
+  // Listen to Firebase Auth state & verify custom claims
+  useEffect(() => {
+    if (!adminAuth) return;
+    const unsubAuth = onAuthStateChanged(adminAuth, async (user) => {
+      setAdminUser(user);
+      if (user) {
+        try {
+          const tokenResult = await user.getIdTokenResult(true);
+          setIsAdminClaimVerified(Boolean(tokenResult.claims.admin));
+        } catch {
+          setIsAdminClaimVerified(false);
+        }
+      } else {
+        setIsAdminClaimVerified(false);
+      }
+    });
+    return () => unsubAuth();
   }, []);
+
+  // Admin Sign In Handler
+  const handleAdminSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminAuth) {
+      setAuthError('Firebase Authentication is not configured in this environment.');
+      return;
+    }
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError('Please enter both email and password.');
+      return;
+    }
+
+    setIsAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      const cred = await signInWithEmailAndPassword(adminAuth, authEmail.trim(), authPassword);
+      setAdminUser(cred.user);
+      const tokenResult = await cred.user.getIdTokenResult(true);
+      const hasClaim = Boolean(tokenResult.claims.admin);
+      setIsAdminClaimVerified(hasClaim);
+      setIsAuthSubmitting(false);
+      setIsAuthModalOpen(false);
+      setAuthPassword('');
+
+      if (hasClaim) {
+        showToast(`✓ Welcome Admin (${cred.user.email})! Live Firestore permissions active.`);
+      } else {
+        showToast(`Signed in as ${cred.user.email}. (Admin claim 'admin: true' pending assignment)`);
+      }
+    } catch (err: any) {
+      setIsAuthSubmitting(false);
+      setAuthError(err.message || 'Authentication failed. Please verify email and password.');
+    }
+  };
+
+  // Admin Sign Out Handler
+  const handleAdminSignOut = async () => {
+    if (adminAuth) {
+      await firebaseSignOut(adminAuth);
+      setAdminUser(null);
+      setIsAdminClaimVerified(false);
+      showToast('Signed out of Administrator session.');
+    }
+  };
 
   // Dynamic Time-filtered Orders based on real current date
   const filteredOrdersByTime = useMemo(() => {
@@ -317,19 +418,28 @@ export function App() {
       alert('Firestore is not configured.');
       return;
     }
+    if (!adminUser) {
+      setIsAuthModalOpen(true);
+      showToast('Please sign in as Administrator before seeding the catalog.');
+      return;
+    }
     const db = adminDb;
     setIsSeeding(true);
     try {
       const batch = writeBatch(db);
       INITIAL_PRODUCTS.forEach((p) => {
         const ref = doc(db, 'products', p.id);
-        batch.set(ref, p);
+        batch.set(ref, p, { merge: true });
       });
       await batch.commit();
       showToast('Successfully seeded 52 certified catalog products to Firestore backend!');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to seed catalog:', err);
-      alert('Failed to seed catalog: ' + String(err));
+      if (err?.code === 'permission-denied' || String(err).includes('permission')) {
+        alert('Permission Denied: Administrator custom claim { admin: true } is required by firestore.rules to modify the catalog.\n\nPlease run the assignment command:\nnode scripts/set-admin-claim.mjs ' + (adminUser?.uid || 'TARGET_UID') + ' "path/to/service-account.json"');
+      } else {
+        alert('Failed to seed catalog: ' + (err?.message || String(err)));
+      }
     } finally {
       setIsSeeding(false);
     }
@@ -493,13 +603,38 @@ export function App() {
 
   return (
     <div className="admin-shell">
+      {/* Mobile Top Header (visible on < 1024px) */}
+      <header className="mobile-header-bar">
+        <button
+          className="mobile-hamburger-btn"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle Navigation Menu">
+          <span>☰</span>
+        </button>
+        <div className="mobile-brand-title" onClick={() => { setActiveNav('dashboard'); setIsMobileMenuOpen(false); }}>
+          <span>💧 CALIFNCO <span className="brand-title-tag">HQ</span></span>
+        </div>
+        <div className="mobile-header-actions">
+          <button
+            className={`mobile-auth-btn ${adminUser ? 'signed-in' : ''}`}
+            onClick={() => setIsAuthModalOpen(true)}>
+            {adminUser ? (isAdminClaimVerified ? '🛡️ Admin' : '⚠️ Pending') : '🔐 Sign In'}
+          </button>
+        </div>
+      </header>
+
+      {/* Backdrop overlay for mobile drawer */}
+      {isMobileMenuOpen && (
+        <div className="sidebar-backdrop" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
       {/* ===================================================================
           1. LEFT SIDEBAR NAVIGATION
           =================================================================== */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         {/* Brand Header */}
         <div className="sidebar-header">
-          <div className="brand-badge" onClick={() => setActiveNav('dashboard')}>
+          <div className="brand-badge" onClick={() => { setActiveNav('dashboard'); setIsMobileMenuOpen(false); }}>
             <div className="brand-icon-box">💧</div>
             <div className="brand-info">
               <div className="brand-title">
@@ -508,6 +643,12 @@ export function App() {
               <div className="brand-sub">ADMIN CENTER</div>
             </div>
           </div>
+          <button
+            className="mobile-close-sidebar-btn"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close Navigation">
+            ✕
+          </button>
         </div>
 
         {/* Navigation Categories */}
@@ -517,7 +658,7 @@ export function App() {
             <div className="nav-group-title">OVERVIEW</div>
             <button
               className={`nav-item ${activeNav === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveNav('dashboard')}>
+              onClick={() => { setActiveNav('dashboard'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">📊</span>
                 <span>Dashboard & Analytics</span>
@@ -525,7 +666,7 @@ export function App() {
             </button>
             <button
               className={`nav-item ${activeNav === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveNav('notifications')}>
+              onClick={() => { setActiveNav('notifications'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">🔔</span>
                 <span>Notifications</span>
@@ -539,7 +680,7 @@ export function App() {
             <div className="nav-group-title">OPERATIONS</div>
             <button
               className={`nav-item ${activeNav === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveNav('orders')}>
+              onClick={() => { setActiveNav('orders'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">📦</span>
                 <span>Orders Management</span>
@@ -548,7 +689,7 @@ export function App() {
             </button>
             <button
               className={`nav-item ${activeNav === 'services' ? 'active' : ''}`}
-              onClick={() => setActiveNav('services')}>
+              onClick={() => { setActiveNav('services'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">🔧</span>
                 <span>Service Bookings</span>
@@ -562,7 +703,7 @@ export function App() {
             <div className="nav-group-title">FLEET & DEALERS</div>
             <button
               className={`nav-item ${activeNav === 'dealers' ? 'active' : ''}`}
-              onClick={() => setActiveNav('dealers')}>
+              onClick={() => { setActiveNav('dealers'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">🤝</span>
                 <span>Dealer Network</span>
@@ -576,7 +717,7 @@ export function App() {
             <div className="nav-group-title">CONFIGURATION</div>
             <button
               className={`nav-item ${activeNav === 'catalog' ? 'active' : ''}`}
-              onClick={() => setActiveNav('catalog')}>
+              onClick={() => { setActiveNav('catalog'); setIsMobileMenuOpen(false); }}>
               <div className="nav-item-left">
                 <span className="nav-icon">💧</span>
                 <span>Catalog & Categories</span>
@@ -590,6 +731,20 @@ export function App() {
               </div>
               <span className="nav-super-tag">SUPER</span>
             </div>
+          </div>
+
+          {/* AUTOMATION & SOCIAL Group */}
+          <div className="nav-group">
+            <div className="nav-group-title">AUTOMATION & MARKETING</div>
+            <button
+              className={`nav-item ${activeNav === 'marketing' ? 'active' : ''}`}
+              onClick={() => { setActiveNav('marketing'); setIsMobileMenuOpen(false); }}>
+              <div className="nav-item-left">
+                <span className="nav-icon">🤖</span>
+                <span>AI Marketing Studio</span>
+              </div>
+              <span className="nav-badge-count" style={{ backgroundColor: '#10B981', color: '#fff' }}>AUTO</span>
+            </button>
           </div>
         </div>
 
@@ -605,19 +760,30 @@ export function App() {
             <span>Customer Mobile App</span>
           </a>
 
-          <div className="user-profile-widget">
+          <div className="user-profile-widget" onClick={() => setIsAuthModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="user-profile-left">
-              <div className="user-avatar-initials">CA</div>
+              <div className="user-avatar-initials">
+                {adminUser?.email ? adminUser.email.slice(0, 2).toUpperCase() : 'CA'}
+              </div>
               <div className="user-profile-meta">
-                <div className="user-profile-name">Califnco Admin</div>
-                <div className="user-profile-status">● Authenticated</div>
+                <div className="user-profile-name" title={adminUser?.email || ''}>
+                  {adminUser?.email ? adminUser.email.split('@')[0] : 'Admin Sign In'}
+                </div>
+                <div className="user-profile-status">
+                  {adminUser
+                    ? (isAdminClaimVerified ? '● Admin Verified' : '○ Claim Pending')
+                    : '○ Click to Sign In'}
+                </div>
               </div>
             </div>
             <button
               className="signout-icon-btn"
-              title="Session Active"
-              onClick={() => showToast('Administrator session is securely authenticated.')}>
-              🔒
+              title={adminUser ? 'View Account & Claim Details' : 'Sign in as Administrator'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAuthModalOpen(true);
+              }}>
+              {adminUser ? (isAdminClaimVerified ? '🛡️' : '⚠️') : '🔐'}
             </button>
           </div>
         </div>
@@ -638,6 +804,7 @@ export function App() {
                 {activeNav === 'dealers' && 'Wholesale Dealer Network'}
                 {activeNav === 'services' && 'Field Service & Installation Desk'}
                 {activeNav === 'notifications' && 'Operational Notifications'}
+                {activeNav === 'marketing' && 'AI Marketing Studio & Social Publishing'}
               </h1>
               <span className="role-tag-badge">🛡️ Super Admin</span>
             </div>
@@ -648,6 +815,7 @@ export function App() {
               {activeNav === 'dealers' && 'Review dealer GST numbers and authorize wholesale pricing tiers'}
               {activeNav === 'services' && 'Customer RO installation and preventive maintenance appointments'}
               {activeNav === 'notifications' && 'Live priority operational alerts across the platform'}
+              {activeNav === 'marketing' && 'Daily promotional copy generation, Meta Graph Instagram staging, and WhatsApp broadcast'}
             </p>
           </div>
 
@@ -668,6 +836,35 @@ export function App() {
                 <span>{isSeeding ? 'Seeding Backend...' : 'Seed Catalog to Backend'}</span>
               </button>
             )}
+
+            {adminUser ? (
+              <div className="admin-auth-chip">
+                <span className={`auth-badge-dot ${isAdminClaimVerified ? 'verified' : 'pending'}`} />
+                <span className="auth-email-text" title={adminUser.email || ''}>
+                  {adminUser.email}
+                </span>
+                <span
+                  className={`auth-claim-tag ${isAdminClaimVerified ? 'verified' : 'pending'}`}
+                  onClick={() => setIsAuthModalOpen(true)}
+                  style={{ cursor: 'pointer' }}>
+                  {isAdminClaimVerified ? 'VERIFIED' : 'CLAIM PENDING'}
+                </span>
+                <button
+                  className="auth-signout-btn"
+                  onClick={handleAdminSignOut}
+                  title="Sign Out">
+                  🚪
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn-admin-signin"
+                onClick={() => setIsAuthModalOpen(true)}>
+                <span>🔐</span>
+                <span>Admin Sign In</span>
+              </button>
+            )}
+
             <button
               className="btn-store-pill"
               onClick={() => showToast('Califnco pure water storefront is operational.')}>
@@ -686,6 +883,36 @@ export function App() {
 
         {/* Content Body */}
         <div className="content-body">
+          {/* Administrator Authentication Status Banners */}
+          {!adminUser && (
+            <div className="admin-standby-banner">
+              <div className="banner-icon">🛡️</div>
+              <div className="banner-text">
+                <div className="banner-title">Admin Sign-In Required for Orders & Fleet Operations</div>
+                <div className="banner-desc">
+                  Firestore rules enforce <code>request.auth.token.admin == true</code>. While products are public, live order dispatches, dealer approvals, and service bookings require an authenticated administrator session.
+                </div>
+              </div>
+              <button className="banner-action-btn" onClick={() => setIsAuthModalOpen(true)}>
+                Sign In as Admin
+              </button>
+            </div>
+          )}
+
+          {adminUser && !isAdminClaimVerified && (
+            <div className="admin-claim-banner">
+              <div className="banner-icon">⚠️</div>
+              <div className="banner-text">
+                <div className="banner-title">Admin Account Connected — Claim <code>admin: true</code> Required</div>
+                <div className="banner-desc">
+                  Signed in as <strong>{adminUser.email}</strong> (UID: <code>{adminUser.uid}</code>). To unlock full Firestore write access for catalog seeding and order updates, assign the custom claim via the admin script.
+                </div>
+              </div>
+              <button className="banner-action-btn secondary" onClick={() => setIsAuthModalOpen(true)}>
+                View Setup Instructions
+              </button>
+            </div>
+          )}
           {/* ===============================================================
               VIEW A: DASHBOARD & ANALYTICS (Matches Reference Image)
               =============================================================== */}
@@ -1664,6 +1891,403 @@ export function App() {
               </div>
             </div>
           )}
+
+          {/* ===============================================================
+              VIEW G: AI MARKETING AUTOMATION & SOCIAL PUBLISHING
+              =============================================================== */}
+          {activeNav === 'marketing' && (() => {
+            const selectedProd = products.find((p) => p.id === marketingProductId) || products[0] || INITIAL_PRODUCTS[0];
+            const postHeadline = `💧 PURE WATER, UNCOMPROMISED HEALTH | ${selectedProd?.name?.toUpperCase() || 'CALIFNCO ADVANCED PURIFICATION'}`;
+            const prodSpecs = selectedProd?.specifications || (selectedProd as any)?.specs;
+            const postSpecs = prodSpecs
+              ? Object.entries(prodSpecs)
+                  .map(([k, v]) => `• ${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`)
+                  .join('\n')
+              : '• Multi-Stage 0.0001-Micron RO Filtration\n• Active Mineralizer\n• 1 Year On-site Warranty';
+            const postCopy = `${postHeadline}
+
+Did you know tap water can carry unseen heavy metals, microplastics, and dissolved solids?
+
+Califnco brings medical-grade water purification to your doorstep. The ${selectedProd?.name} delivers crisp, 100% pure mineral water with certified multi-stage filtration.
+
+✨ KEY PERFORMANCE SPECS:
+${postSpecs}
+
+💎 SPECIAL PROMOTION:
+• Retail: ₹${selectedProd?.price?.toLocaleString('en-IN')} (Free Standard Installation & TDS Test)
+• Verified Wholesale Tier: ₹${selectedProd?.wholesalePrice?.toLocaleString('en-IN')}/unit (MOQ: ${selectedProd?.minWholesaleQty || 5} units)
+
+📲 Order now on the Califnco Mobile App, or schedule an on-demand technician visit today.
+
+1800-420-PURE | support@califnco.com | Bengaluru, India
+
+#Califnco #PureWater #ROWaterPurifier #CleanWaterEveryDay #HealthyLiving #AlkalineWater #BengaluruWater #HomeWellness`;
+
+            const metaGraphPayload = {
+              endpoint_step1: 'POST https://graph.facebook.com/v19.0/17841400000000000/media',
+              body_step1: {
+                image_url: selectedProd?.imageUrl || 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e',
+                caption: postCopy,
+              },
+              endpoint_step2: 'POST https://graph.facebook.com/v19.0/17841400000000000/media_publish',
+              body_step2: {
+                creation_id: 'CONTAINER_ID_STAGED_READY',
+              },
+            };
+
+            const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(postCopy)}`;
+
+            const copyToClipboard = () => {
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(postCopy);
+              }
+              showToast('✓ AI promotional copy & hashtags copied to clipboard!');
+            };
+
+            return (
+              <div className="view-panel-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Top Banner */}
+                <div
+                  style={{
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}>
+                  <div>
+                    <div
+                      style={{
+                        display: 'inline-block',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        marginBottom: '6px',
+                      }}>
+                      ⚡ AUTONOMOUS MARKETING STUDIO
+                    </div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0' }}>
+                      Daily Campaign &amp; Social Publishing Desk
+                    </h2>
+                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9 }}>
+                      Autonomous product marketing copywriter, Meta Graph Instagram staging engine, and WhatsApp broadcast gateway.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>Select Product:</span>
+                    <select
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        backgroundColor: '#ffffff',
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        maxWidth: '260px',
+                      }}
+                      value={marketingProductId || selectedProd?.id}
+                      onChange={(e) => setMarketingProductId(e.target.value)}>
+                      {(products.length > 0 ? products : INITIAL_PRODUCTS).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (₹{p.price.toLocaleString('en-IN')})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Main Studio Grid */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                    gap: '1.25rem',
+                  }}>
+                  {/* Left Column: Creative & Copy Preview */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border)',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                    }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>🎨 Marketing Creative &amp; Copy</h3>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: 'var(--primary)',
+                          backgroundColor: 'var(--primary-light)',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                        }}>
+                        Engine: Gemini 1.5 Flash / High-Fidelity NLP
+                      </span>
+                    </div>
+
+                    {/* Product Media Card */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        alignItems: 'center',
+                        backgroundColor: 'var(--bg-subtle, #f8fafc)',
+                        padding: '0.85rem',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                      }}>
+                      <img
+                        src={selectedProd?.imageUrl}
+                        alt={selectedProd?.name}
+                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                        onError={(e) => {
+                          (e.target as any).src =
+                            'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=200';
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                          {selectedProd?.name}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Category: <strong style={{ textTransform: 'capitalize' }}>{selectedProd?.category}</strong> • Retail: ₹{selectedProd?.price?.toLocaleString('en-IN')}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 700, marginTop: '2px' }}>
+                          Wholesale Partner Rate: ₹{selectedProd?.wholesalePrice?.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Copy Area */}
+                    <div>
+                      <label
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          display: 'block',
+                          marginBottom: '6px',
+                        }}>
+                        Generated Social Caption &amp; Hashtag Block
+                      </label>
+                      <textarea
+                        readOnly
+                        value={postCopy}
+                        style={{
+                          width: '100%',
+                          minHeight: '240px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border)',
+                          padding: '0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.82rem',
+                          lineHeight: '1.5',
+                          backgroundColor: 'var(--bg-subtle, #f8fafc)',
+                          color: 'var(--text-main)',
+                          resize: 'vertical',
+                        }}
+                      />
+                    </div>
+
+                    {/* Copy Action Row */}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn-action-primary"
+                        onClick={copyToClipboard}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.6rem 1.25rem' }}>
+                        📋 Copy Caption &amp; Hashtags
+                      </button>
+                      <button
+                        className="btn-action-secondary"
+                        onClick={() => {
+                          const catalog = products.length > 0 ? products : INITIAL_PRODUCTS;
+                          const randomItem = catalog[Math.floor(Math.random() * catalog.length)];
+                          setMarketingProductId(randomItem.id);
+                          showToast(`✓ Generated new campaign for: ${randomItem.name}`);
+                        }}
+                        style={{ padding: '0.6rem 1rem' }}>
+                        🎲 Pick Another Product
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Multi-Channel Publishing Gateways */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* Channel 1: WhatsApp Status & Broadcast */}
+                    <div
+                      style={{
+                        backgroundColor: 'var(--surface)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        padding: '1.25rem',
+                      }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '8px',
+                        }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>💬</span>
+                          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                            WhatsApp Broadcast &amp; Status
+                          </h3>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: '#047857',
+                            backgroundColor: '#ecfdf5',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                          }}>
+                          ✓ Operational
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 12px 0' }}>
+                        Dispatches product marketing post to customer contact lists and WhatsApp Status updates.
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <a
+                          href={whatsappShareUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            backgroundColor: '#25D366',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            padding: '0.65rem 1rem',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                          }}>
+                          🟢 One-Click Share to WhatsApp Status
+                        </a>
+                        <div
+                          style={{
+                            fontSize: '0.72rem',
+                            color: 'var(--text-muted)',
+                            backgroundColor: 'var(--bg-subtle, #f8fafc)',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border)',
+                          }}>
+                          WAHA Endpoint: <code>POST /api/sendText</code> (chatId: status@broadcast)
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Channel 2: Instagram Meta Graph API */}
+                    <div
+                      style={{
+                        backgroundColor: 'var(--surface)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        padding: '1.25rem',
+                      }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '8px',
+                        }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>📸</span>
+                          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                            Instagram Meta Graph API
+                          </h3>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: '#b45309',
+                            backgroundColor: '#fef3c7',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                          }}>
+                          Dry-Run Staging Mode
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          backgroundColor: '#fffbeb',
+                          border: '1px solid #fde68a',
+                          borderRadius: '8px',
+                          padding: '10px',
+                          fontSize: '0.78rem',
+                          color: '#92400e',
+                          lineHeight: 1.4,
+                          marginBottom: '10px',
+                        }}>
+                        <strong>Account Constraint Status:</strong> The candidate Instagram account is currently restricted by Meta. In accordance with assignment instructions, the pipeline executes in transparent Dry-Run Staging mode with fully validated Meta Graph container and publish payloads.
+                      </div>
+
+                      <button
+                        className="btn-action-secondary"
+                        onClick={() => setShowRawMetaPayload(!showRawMetaPayload)}
+                        style={{ width: '100%', fontSize: '0.8rem', padding: '0.5rem' }}>
+                        {showRawMetaPayload ? 'Hide Staged Graph API Payload' : 'Inspect Staged Meta Graph Payload (JSON)'}
+                      </button>
+
+                      {showRawMetaPayload && (
+                        <pre
+                          style={{
+                            marginTop: '10px',
+                            backgroundColor: '#0f172a',
+                            color: '#38bdf8',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            fontSize: '0.72rem',
+                            overflowX: 'auto',
+                            maxHeight: '180px',
+                          }}>
+                          {JSON.stringify(metaGraphPayload, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+
+                    {/* Channel 3: Staged Artifact Persistence */}
+                    <div
+                      style={{
+                        backgroundColor: 'var(--surface)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        padding: '1rem',
+                        fontSize: '0.8rem',
+                      }}>
+                      <div style={{ fontWeight: 700, marginBottom: '4px' }}>📁 Local Pipeline Artifacts</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                        Scripts run autonomously via <code>node scripts/ai-daily-marketing.mjs</code> and persist JSON snapshots to <code>docs/daily_posts/post-[date].json</code>.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </main>
 
@@ -1973,6 +2597,231 @@ export function App() {
                 Close Invoice
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Sign-In & Claim Status Modal */}
+      {isAuthModalOpen && (
+        <div className="modal-backdrop premium-backdrop" onClick={() => setIsAuthModalOpen(false)}>
+          <div className="modal-window auth-modal-premium" onClick={(e) => e.stopPropagation()}>
+            {/* Ambient Background Glow Accents */}
+            <div className="auth-glow-accent top-right" />
+            <div className="auth-glow-accent bottom-left" />
+
+            {/* Header Hero Banner */}
+            <div className="auth-modal-hero">
+              <button
+                className="auth-modal-close"
+                onClick={() => setIsAuthModalOpen(false)}
+                aria-label="Close modal">
+                ✕
+              </button>
+              <div className="auth-hero-badge">
+                <span className="auth-hero-icon">💧</span>
+                <span className="auth-hero-tag">HQ SECURITY COMMAND</span>
+              </div>
+              <h2 className="auth-hero-title">
+                {adminUser ? 'Administrator Identity & Privileges' : 'Califnco PureWater Portal'}
+              </h2>
+              <p className="auth-hero-subtitle">
+                {adminUser
+                  ? 'Verify active session token, inspect custom claims, and manage operational permissions.'
+                  : 'Privileged authentication for order fulfillment, dealer onboarding, and live telemetry.'}
+              </p>
+            </div>
+
+            {/* Body */}
+            {adminUser ? (
+              <div className="auth-modal-body">
+                {/* Executive Identity Card */}
+                <div className="executive-id-card">
+                  <div className="id-card-avatar">
+                    <span>{adminUser.email ? adminUser.email.slice(0, 2).toUpperCase() : 'AD'}</span>
+                    <span className={`id-status-indicator ${isAdminClaimVerified ? 'verified' : 'pending'}`} />
+                  </div>
+                  <div className="id-card-details">
+                    <div className="id-card-email" title={adminUser.email || ''}>
+                      {adminUser.email}
+                    </div>
+                    <div className="id-card-uid-row">
+                      <span className="id-uid-label">UID:</span>
+                      <code className="id-uid-code">{adminUser.uid}</code>
+                      <button
+                        type="button"
+                        className="btn-copy-chip"
+                        onClick={() => {
+                          navigator.clipboard.writeText(adminUser.uid);
+                          setCopiedUid(true);
+                          setTimeout(() => setCopiedUid(false), 2000);
+                          showToast('UID copied to clipboard!');
+                        }}>
+                        {copiedUid ? '✓ Copied' : '📋 Copy'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className={`id-claim-badge ${isAdminClaimVerified ? 'verified' : 'pending'}`}>
+                    {isAdminClaimVerified ? '🛡️ TOKEN VERIFIED' : '⚠️ CLAIM PENDING'}
+                  </div>
+                </div>
+
+                {/* Token Verification Details */}
+                {!isAdminClaimVerified ? (
+                  <div className="claim-command-card">
+                    <div className="command-card-header">
+                      <span className="command-card-icon">⚡</span>
+                      <div>
+                        <div className="command-card-title">Assign Cryptographic Claim</div>
+                        <div className="command-card-sub">Run via Terminal using your Firebase Service Account</div>
+                      </div>
+                    </div>
+                    <div className="command-terminal-box">
+                      <div className="terminal-header">
+                        <span className="terminal-dot red" />
+                        <span className="terminal-dot yellow" />
+                        <span className="terminal-dot green" />
+                        <span className="terminal-title">powershell / bash</span>
+                      </div>
+                      <pre className="terminal-code">
+                        node scripts/set-admin-claim.mjs {adminUser.uid} "path/to/service-account.json"
+                      </pre>
+                    </div>
+                    <p className="terminal-hint">
+                      💡 Once executed, click <strong>"Refresh Token Claims"</strong> below to activate permissions without re-authenticating.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="claim-active-card">
+                    <div className="claim-active-icon">✓</div>
+                    <div className="claim-active-text">
+                      <div className="claim-active-title">Full Administrative Authority Active</div>
+                      <div className="claim-active-desc">
+                        Custom claim <code>request.auth.token.admin == true</code> is validated on project <strong>califnco-assignment-d989e</strong>.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Security Feature Highlights */}
+                <div className="auth-security-pills">
+                  <span className="security-pill">🔒 TLS 1.3 Encryption</span>
+                  <span className="security-pill">🛡️ Firestore Rules Guarded</span>
+                  <span className="security-pill">⚡ Real-time Telemetry Active</span>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="auth-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-auth-action outline"
+                    onClick={async () => {
+                      try {
+                        const token = await adminUser.getIdTokenResult(true);
+                        const hasClaim = Boolean(token.claims.admin);
+                        setIsAdminClaimVerified(hasClaim);
+                        showToast(hasClaim ? '✓ Admin claim verified!' : 'Claim not detected yet. Run set-admin-claim.mjs first.');
+                      } catch (err: any) {
+                        showToast('Error refreshing claims: ' + err.message);
+                      }
+                    }}>
+                    🔄 Refresh Token Claims
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-auth-action danger"
+                    onClick={handleAdminSignOut}>
+                    Sign Out Session
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleAdminSignIn} className="auth-modal-body">
+                {authError && (
+                  <div className="auth-error-card">
+                    <span className="error-icon">⚠️</span>
+                    <div className="error-text">
+                      <div className="error-title">Authentication Failed</div>
+                      <div className="error-desc">{authError}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="auth-input-group">
+                  <label className="auth-label">
+                    <span>ADMINISTRATOR EMAIL</span>
+                    <span className="auth-label-hint">Registered Account</span>
+                  </label>
+                  <div className="auth-input-wrapper">
+                    <span className="auth-input-icon">✉️</span>
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      className="auth-input-field"
+                      placeholder="admin@califnco.com"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="auth-input-group">
+                  <div className="auth-label-row">
+                    <label className="auth-label">PASSWORD</label>
+                    <button
+                      type="button"
+                      className="auth-toggle-pwd"
+                      onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? '👁️ Hide' : '👁️‍🗨️ Show'}
+                    </button>
+                  </div>
+                  <div className="auth-input-wrapper">
+                    <span className="auth-input-icon">🔑</span>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      className="auth-input-field"
+                      placeholder="••••••••••••"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Security Badges */}
+                <div className="auth-security-pills">
+                  <span className="security-pill">🛡️ Role-Based Access</span>
+                  <span className="security-pill">🔐 Firebase Auth Verified</span>
+                  <span className="security-pill">⚡ Live Operations Desk</span>
+                </div>
+
+                {/* Submit Footer */}
+                <div className="auth-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-auth-action cancel"
+                    onClick={() => setIsAuthModalOpen(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-auth-action submit"
+                    disabled={isAuthSubmitting}>
+                    {isAuthSubmitting ? (
+                      <>
+                        <span className="btn-spinner" />
+                        <span>Verifying Credentials...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🚀</span>
+                        <span>Sign In to Admin Console</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -23,6 +23,11 @@ export const ProfileView: React.FC = () => {
     isFirebaseActive,
     logout,
     setAuthModalVisible,
+    resetLocalCache,
+    dealerStatus,
+    dealerProfile,
+    isDealerApproved,
+    setDealerApplyModalVisible,
   } = useShop();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -379,6 +384,75 @@ export const ProfileView: React.FC = () => {
           )}
         </View>
 
+        {/* Wholesale Dealer Program Portal */}
+        <View
+          style={[
+            styles.sectionCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Wholesale Dealer Program
+                </Text>
+                {isDealerApproved ? (
+                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: '#047857', fontSize: 10, fontWeight: '700' }}>✓ ACTIVE PARTNER</Text>
+                  </View>
+                ) : dealerStatus === 'pending' ? (
+                  <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: '#B45309', fontSize: 10, fontWeight: '700' }}>UNDER REVIEW</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                {isDealerApproved
+                  ? `B2B partner tier unlocked for ${dealerProfile?.companyName || 'your business'}. Catalog shows wholesale pricing.`
+                  : dealerStatus === 'pending'
+                  ? 'Your GST registration application is pending administrator verification.'
+                  : 'Distribute Califnco RO water purifiers & commercial filters at wholesale pricing.'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 12 }}>
+            {isDealerApproved ? (
+              <View style={{ backgroundColor: scheme === 'dark' ? '#064E3B' : '#ECFDF5', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#10B981' }}>
+                <Text style={{ color: '#047857', fontWeight: '700', fontSize: 12, marginBottom: 4 }}>
+                  🏢 {dealerProfile?.companyName} • GST: {dealerProfile?.gstNumber}
+                </Text>
+                <Text style={{ color: '#065F46', fontSize: 11, lineHeight: 16 }}>
+                  Wholesale ordering enabled automatically on product catalog with minimum order quantities (MOQ).
+                </Text>
+              </View>
+            ) : dealerStatus === 'pending' ? (
+              <View style={{ backgroundColor: scheme === 'dark' ? '#78350F' : '#FEF3C7', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#F59E0B' }}>
+                <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 12, marginBottom: 4 }}>
+                  ⏳ Application Submitted (GST: {dealerProfile?.gstNumber || 'Provided'})
+                </Text>
+                <Text style={{ color: '#78350F', fontSize: 11, lineHeight: 16 }}>
+                  Califnco team is reviewing your credentials. B2B rates will activate upon admin approval.
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.primary,
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+                onPress={() => setDealerApplyModalVisible(true)}
+                activeOpacity={0.8}>
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                  Apply for Wholesale / Dealer Account 🏢
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         {/* Califnco Support & Helpline Card */}
         <View
           style={[
@@ -399,6 +473,42 @@ export const ProfileView: React.FC = () => {
             <Text style={[styles.supportEmail, { color: colors.textSecondary }]}>
               Email: care@califnco.com
             </Text>
+          </View>
+        </View>
+
+        {/* Local Device Storage & Cache Management */}
+        <View
+          style={[
+            styles.supportCard,
+            { backgroundColor: colors.card, borderColor: colors.border, marginTop: 12 },
+          ]}>
+          <Text style={styles.supportHeadEmoji}>🧹</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.supportTitle, { color: colors.text }]}>
+              Storage & Cache Management
+            </Text>
+            <Text style={[styles.supportHours, { color: colors.textSecondary, marginBottom: 8 }]}>
+              Clear locally cached cart items or stale mock orders from previous app sessions.
+            </Text>
+            <TouchableOpacity
+              style={{
+                alignSelf: 'flex-start',
+                paddingVertical: 8,
+                paddingHorizontal: 14,
+                backgroundColor: colors.dangerLight,
+                borderColor: colors.danger,
+                borderWidth: 1,
+                borderRadius: 8,
+              }}
+              onPress={async () => {
+                await resetLocalCache();
+                setSavedSuccess(true);
+                setTimeout(() => setSavedSuccess(false), 2000);
+              }}>
+              <Text style={{ fontFamily: Typography.bold, color: colors.danger, fontSize: 12, fontWeight: '700' }}>
+                Reset Cart & Purge Local Cache
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

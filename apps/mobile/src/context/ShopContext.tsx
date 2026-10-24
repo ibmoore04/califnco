@@ -7,27 +7,49 @@ import {
   Order,
   UserProfile,
   ProductCategory,
+  DealerProfile,
+  DealerApprovalStatus,
+  ServiceBooking,
   INITIAL_PRODUCTS,
 } from '@shared';
 import {
   isFirebaseConfigured,
+  auth,
   signInWithEmail,
   signUpWithEmail,
   signOutUser,
   subscribeToAuthChanges,
   syncOrderToFirestore,
   fetchUserOrdersFromFirestore,
-  fetchProductsFromFirestore,
+  submitDealerApplicationToFirestore,
+  fetchDealerApplicationFromFirestore,
+  createServiceBookingInFirestore,
+  fetchUserServiceBookingsFromFirestore,
   formatFirebaseAuthError,
 } from '@/services/firebase';
+import { ProductService, ProductServiceResult } from '@/services/productService';
+import { PaymentService } from '@/services/paymentService';
 
 export type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'name';
-export type TabType = 'catalogue' | 'cart' | 'orders' | 'profile';
+export type TabType = 'catalogue' | 'cart' | 'orders' | 'services' | 'profile';
+
+export interface InAppNotification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+  type: 'order' | 'service' | 'dealer' | 'system';
+}
 
 interface ShopContextType {
   // Products & Filters
   products: Product[];
   filteredProducts: Product[];
+  isProductsLoading: boolean;
+  productsError: string | null;
+  isDemoFallback: boolean;
+  refreshProducts: () => Promise<void>;
   selectedCategory: ProductCategory | 'all';
   setSelectedCategory: (category: ProductCategory | 'all') => void;
   searchQuery: string;
@@ -50,9 +72,10 @@ interface ShopContextType {
 
   // Orders
   orders: Order[];
-  placeOrder: (shippingAddress: Address, paymentMethod: 'razorpay' | 'cod') => Order;
+  placeOrder: (shippingAddress: Address, paymentMethod: 'razorpay' | 'cod') => Promise<Order>;
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
+  resetLocalCache: () => Promise<void>;
 
   // Customer Profile & Authentication
   userProfile: UserProfile;
@@ -70,6 +93,30 @@ interface ShopContextType {
     phone?: string
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
+
+  // Wholesale Dealer Program
+  dealerProfile: DealerProfile | null;
+  isDealerApproved: boolean;
+  dealerStatus: DealerApprovalStatus | null;
+  applyForDealer: (data: Omit<DealerProfile, 'id' | 'userId' | 'status' | 'appliedAt'>) => Promise<boolean>;
+  isDealerApplyModalVisible: boolean;
+  setDealerApplyModalVisible: (visible: boolean) => void;
+
+  // Field Service Bookings
+  serviceBookings: ServiceBooking[];
+  isServicesLoading: boolean;
+  bookService: (data: Omit<ServiceBooking, 'id' | 'userId' | 'status' | 'createdAt' | 'updatedAt'>) => Promise<ServiceBooking | null>;
+  refreshServiceBookings: () => Promise<void>;
+  isServiceBookingModalVisible: boolean;
+  setServiceBookingModalVisible: (visible: boolean) => void;
+
+  // In-App Notifications
+  notifications: InAppNotification[];
+  unreadNotificationCount: number;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  isNotificationsModalVisible: boolean;
+  setNotificationsModalVisible: (visible: boolean) => void;
 
   // Auth Modal Visibility
   isAuthModalVisible: boolean;
@@ -94,6 +141,9 @@ const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState<boolean>(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [isDemoFallback, setIsDemoFallback] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('featured');
@@ -106,56 +156,258 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<UserProfile>(EMPTY_GUEST_PROFILE);
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
 
+  // Dealer Program States
+  const [dealerProfile, setDealerProfile] = useState<DealerProfile | null>(null);
+  const [isDealerApplyModalVisible, setDealerApplyModalVisible] = useState<boolean>(false);
+
+  // Field Service Bookings States
+  const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
+  const [isServicesLoading, setIsServicesLoading] = useState<boolean>(false);
+  const [isServiceBookingModalVisible, setServiceBookingModalVisible] = useState<boolean>(false);
+
+  // In-App Operational Notifications State
+  const [notifications, setNotifications] = useState<InAppNotification[]>([
+    {
+      id: 'notif_welcome',
+      title: 'Welcome to Califnco PureWater',
+      message: 'Explore our 52+ certified pure water RO purifiers, dispensers, booster pumps, and genuine spare parts.',
+      date: new Date().toISOString(),
+      read: false,
+      type: 'system',
+    },
+  ]);
+  const [isNotificationsModalVisible, setNotificationsModalVisible] = useState<boolean>(false);
+
   // Firebase Auth states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthModalVisible, setAuthModalVisible] = useState<boolean>(false);
 
+  // Derived Dealer Approvals
+  const isDealerApproved = useMemo(() => {
+    return (
+      userProfile.role === 'dealer' ||
+      dealerProfile?.status === 'approved' ||
+      userProfile.dealerStatus === 'approved'
+    );
+  }, [userProfile, dealerProfile]);
+
+  const dealerStatus = useMemo(() => {
+    if (dealerProfile?.status) return dealerProfile.status;
+    if (userProfile.dealerStatus) return userProfile.dealerStatus;
+    return null;
+  }, [dealerProfile, userProfile]);
+
+  // Notifications Helpers
+  const addNotification = useCallback(
+    (title: string, message: string, type: 'order' | 'service' | 'dealer' | 'system') => {
+      const newNotif: InAppNotification = {
+        id: `notif_${Date.now()}`,
+        title,
+        message,
+        date: new Date().toISOString(),
+        read: false,
+        type,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    },
+    []
+  );
+
+  const markNotificationAsRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  }, []);
+
+  const markAllNotificationsAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const unreadNotificationCount = useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
+
+  // Wholesale Dealer Application Handler
+  const applyForDealer = useCallback(
+    async (data: Omit<DealerProfile, 'id' | 'userId' | 'status' | 'appliedAt'>): Promise<boolean> => {
+      if (!isFirebaseConfigured || !auth?.currentUser) {
+        // Fallback demo dealer application
+        const name = data.businessName || data.companyName || 'Business';
+        const demoApp: DealerProfile = {
+          id: `demo_dealer_${Date.now()}`,
+          userId: userProfile.uid || 'demo_user',
+          businessName: name,
+          companyName: name,
+          contactPerson: data.contactPerson,
+          email: data.email || userProfile.email,
+          phone: data.phone,
+          gstNumber: data.gstNumber.toUpperCase(),
+          address: data.address,
+          status: 'pending',
+          appliedAt: new Date().toISOString(),
+        };
+        setDealerProfile(demoApp);
+        setUserProfile((prev) => ({ ...prev, dealerStatus: 'pending' }));
+        addNotification(
+          'Dealer Application Submitted',
+          `Your wholesale registration for "${name}" (GST: ${data.gstNumber}) is under review by Califnco HQ.`,
+          'dealer'
+        );
+        return true;
+      }
+
+      const companyName = data.businessName || data.companyName || 'Business';
+      const app = await submitDealerApplicationToFirestore(data);
+      if (app) {
+        setDealerProfile(app);
+        setUserProfile((prev) => ({ ...prev, dealerStatus: 'pending' }));
+        addNotification(
+          'Dealer Application Submitted',
+          `Your wholesale registration for "${companyName}" (GST: ${data.gstNumber}) is under review by Califnco HQ.`,
+          'dealer'
+        );
+        return true;
+      }
+      return false;
+    },
+    [isFirebaseConfigured, userProfile, addNotification]
+  );
+
+  // Field Service Booking Handlers
+  const refreshServiceBookings = useCallback(async () => {
+    if (!auth?.currentUser) return;
+    setIsServicesLoading(true);
+    try {
+      const bookings = await fetchUserServiceBookingsFromFirestore(auth.currentUser.uid);
+      setServiceBookings(bookings);
+    } catch (err) {
+      console.warn('[Califnco Services] Error fetching service bookings:', err);
+    } finally {
+      setIsServicesLoading(false);
+    }
+  }, []);
+
+  const bookService = useCallback(
+    async (
+      data: Omit<ServiceBooking, 'id' | 'userId' | 'status' | 'createdAt' | 'updatedAt'>
+    ): Promise<ServiceBooking | null> => {
+      const uid = auth?.currentUser?.uid || userProfile.uid || `demo_user_${Date.now()}`;
+
+      if (!isFirebaseConfigured || !auth?.currentUser) {
+        // Fallback demo service booking
+        const bookingId = `SRV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+        const demoBooking: ServiceBooking = {
+          id: bookingId,
+          userId: uid,
+          customerName: data.customerName,
+          customerPhone: data.customerPhone,
+          serviceType: data.serviceType,
+          preferredDate: data.preferredDate,
+          preferredTimeSlot: data.preferredTimeSlot || '10:00 AM - 1:00 PM',
+          address: data.address,
+          notes: data.notes || '',
+          status: 'submitted',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setServiceBookings((prev) => [demoBooking, ...prev]);
+        addNotification(
+          'Service Appointment Booked',
+          `Your service ticket #${demoBooking.id} for "${demoBooking.serviceType.replace('_', ' ').toUpperCase()}" on ${demoBooking.preferredDate} (${demoBooking.preferredTimeSlot}) has been logged.`,
+          'service'
+        );
+        return demoBooking;
+      }
+
+      const booking = await createServiceBookingInFirestore(data);
+      if (booking) {
+        setServiceBookings((prev) => [booking, ...prev]);
+        addNotification(
+          'Service Appointment Booked',
+          `Your service ticket #${booking.id} for "${booking.serviceType.replace('_', ' ').toUpperCase()}" on ${booking.preferredDate} (${booking.preferredTimeSlot}) has been logged.`,
+          'service'
+        );
+        return booking;
+      }
+      return null;
+    },
+    [isFirebaseConfigured, userProfile, addNotification]
+  );
+
   const clearAuthError = useCallback(() => {
     setAuthError(null);
   }, []);
 
-  // Hydrate persistent state on mount
+  const refreshProducts = useCallback(async () => {
+    setIsProductsLoading(true);
+    setProductsError(null);
+    try {
+      const res = await ProductService.getProducts();
+      setProducts(res.products);
+      setIsDemoFallback(res.isDemoFallback);
+      setProductsError(res.error);
+    } catch (err: any) {
+      setProductsError(err.message || 'Failed to load products');
+    } finally {
+      setIsProductsLoading(false);
+    }
+  }, []);
+
+  // Hydrate persistent state on mount & connect to live Firestore catalog
   useEffect(() => {
     const hydrateStorage = async () => {
       try {
         const savedOrders = await safeStorage.getItem('califnco_orders');
         if (savedOrders) {
-          const parsed = JSON.parse(savedOrders);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOrders(parsed);
+          try {
+            const parsed = JSON.parse(savedOrders);
+            if (Array.isArray(parsed)) {
+              // Strip out any legacy mock orders from earlier revisions
+              const cleanOrders = parsed.filter(
+                (o) =>
+                  o &&
+                  o.userId !== 'usr_cust_demo_01' &&
+                  !String(o.id).includes('7841') &&
+                  !String(o.id).includes('8194')
+              );
+              setOrders(cleanOrders);
+              if (cleanOrders.length !== parsed.length) {
+                safeStorage.setItem('califnco_orders', JSON.stringify(cleanOrders)).catch(() => {});
+              }
+            }
+          } catch {
+            safeStorage.removeItem('califnco_orders').catch(() => {});
           }
         }
 
         const savedCart = await safeStorage.getItem('califnco_cart');
         if (savedCart) {
-          const parsedCart = JSON.parse(savedCart);
-          if (Array.isArray(parsedCart)) {
-            setCart(parsedCart);
+          try {
+            const parsedCart = JSON.parse(savedCart);
+            if (Array.isArray(parsedCart)) {
+              setCart(parsedCart);
+            }
+          } catch {
+            safeStorage.removeItem('califnco_cart').catch(() => {});
           }
         }
 
         const savedProfile = await safeStorage.getItem('califnco_profile');
         if (savedProfile) {
-          const parsedProfile = JSON.parse(savedProfile);
-          if (parsedProfile && parsedProfile.displayName) {
-            setUserProfile(parsedProfile);
-            if (parsedProfile.isFirebaseAuth) {
-              setIsAuthenticated(true);
-            }
-          }
-        }
-
-        // Fetch live catalog from Firestore backend
-        if (isFirebaseConfigured) {
           try {
-            const backendProducts = await fetchProductsFromFirestore();
-            if (backendProducts && backendProducts.length > 0) {
-              setProducts(backendProducts);
+            const parsedProfile = JSON.parse(savedProfile);
+            if (parsedProfile && parsedProfile.uid !== 'usr_cust_demo_01') {
+              setUserProfile(parsedProfile);
+              if (parsedProfile.isFirebaseAuth) {
+                setIsAuthenticated(true);
+              }
+            } else {
+              safeStorage.removeItem('califnco_profile').catch(() => {});
             }
-          } catch (pErr) {
-            console.warn('[Califnco Shop] Could not load products from Firestore:', pErr);
+          } catch {
+            safeStorage.removeItem('califnco_profile').catch(() => {});
           }
         }
       } catch (err) {
@@ -164,9 +416,24 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     hydrateStorage();
 
+    // Subscribe to live Firestore products collection
+    const unsubProducts = ProductService.subscribeProducts(
+      (res: ProductServiceResult) => {
+        setProducts(res.products);
+        setIsDemoFallback(res.isDemoFallback);
+        setProductsError(res.error);
+        setIsProductsLoading(false);
+      },
+      (err: Error) => {
+        setProductsError(err.message);
+        setIsProductsLoading(false);
+      }
+    );
+
     // Listen to Firebase Auth state
+    let authUnsubscribe: (() => void) | null = null;
     if (isFirebaseConfigured) {
-      const unsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
+      authUnsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
         if (firebaseUser) {
           setIsAuthenticated(true);
           setUserProfile((prev) => ({
@@ -176,15 +443,30 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: firebaseUser.displayName || prev.displayName,
             role: 'customer',
           }));
+
+          // Fetch orders for customer
           const remoteOrders = await fetchUserOrdersFromFirestore(firebaseUser.uid);
-          if (remoteOrders && remoteOrders.length > 0) {
-            setOrders(remoteOrders);
-            safeStorage.setItem('califnco_orders', JSON.stringify(remoteOrders)).catch(() => {});
+          setOrders(remoteOrders);
+          safeStorage.setItem('califnco_orders', JSON.stringify(remoteOrders)).catch(() => {});
+
+          // Fetch dealer application status
+          const dealer = await fetchDealerApplicationFromFirestore(firebaseUser.uid);
+          if (dealer) {
+            setDealerProfile(dealer);
+            setUserProfile((prev) => ({ ...prev, dealerStatus: dealer.status }));
           }
+
+          // Fetch customer service bookings
+          const bookings = await fetchUserServiceBookingsFromFirestore(firebaseUser.uid);
+          setServiceBookings(bookings);
         }
       });
-      return () => unsubscribe();
     }
+
+    return () => {
+      unsubProducts();
+      if (authUnsubscribe) authUnsubscribe();
+    };
   }, []);
 
   // Persist cart changes
@@ -353,12 +635,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Sorry, this product is currently out of stock.' };
     }
 
+    const effectivePrice =
+      isDealerApproved && ((product as any).dealerPrice || product.wholesalePrice)
+        ? ((product as any).dealerPrice || product.wholesalePrice)
+        : product.price;
+    const effectiveQty = isDealerApproved
+      ? Math.max(quantity, (product as any).minOrderQuantity || product.minWholesaleQty || 5)
+      : quantity;
+
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + effectiveQty }
             : item
         );
       }
@@ -366,13 +656,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         {
           product,
-          quantity,
-          pricePerUnit: product.price,
+          quantity: effectiveQty,
+          pricePerUnit: effectivePrice,
         },
       ];
     });
 
-    return { success: true, message: `Added "${product.name}" to cart.` };
+    const tierMsg = isDealerApproved
+      ? ` (Wholesale tier: ₹${effectivePrice}/unit, MOQ: ${effectiveQty})`
+      : '';
+    return { success: true, message: `Added "${product.name}" to cart.${tierMsg}` };
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -395,17 +688,33 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart([]);
   };
 
-  // Place Order (Safe Demo & Firestore sync)
-  const placeOrder = (
+  // Place Order (Safe Demo & Firestore sync via modular PaymentService)
+  const placeOrder = async (
     shippingAddress: Address,
     paymentMethod: 'razorpay' | 'cod'
-  ): Order => {
+  ): Promise<Order> => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderId = `CAL-2026-${randomSuffix}`;
+
+    const paymentResult = await PaymentService.processPayment({
+      orderId,
+      amount: totalAmount,
+      customer: {
+        fullName: shippingAddress.fullName,
+        email: userProfile.email || auth?.currentUser?.email || '',
+        phone: shippingAddress.phone,
+        address: shippingAddress,
+      },
+      method: paymentMethod,
+    });
+
+    const currentUid = auth?.currentUser?.uid || userProfile.uid || `demo_user_${Date.now()}`;
+
     const newOrder: Order = {
-      id: `CAL-2026-${randomSuffix}`,
-      userId: userProfile.uid,
-      userEmail: userProfile.email,
-      userRole: 'customer',
+      id: orderId,
+      userId: currentUid,
+      userEmail: userProfile.email || auth?.currentUser?.email || 'customer@califnco.app',
+      userRole: isDealerApproved ? 'dealer' : 'customer',
       items: cart.map((item) => ({
         productId: item.product.id,
         productName: item.product.name,
@@ -420,9 +729,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       totalAmount,
       shippingAddress,
       status: 'pending',
-      paymentStatus: paymentMethod === 'razorpay' ? 'paid' : 'pending',
+      paymentStatus: paymentResult.paymentStatus, // 'pending'
       paymentMethod,
-      razorpayPaymentId: paymentMethod === 'razorpay' ? `pay_demo_${Date.now()}` : undefined,
+      razorpayPaymentId: paymentResult.transactionId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -433,11 +742,30 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return updated;
     });
 
+    addNotification(
+      'Order Confirmed',
+      `Order #${orderId} for ₹${totalAmount.toLocaleString('en-IN')} has been placed successfully. Status: Pending Fulfillment.`,
+      'order'
+    );
+
     // Attempt non-blocking sync to Firestore
-    syncOrderToFirestore(newOrder).catch(() => {});
+    syncOrderToFirestore(newOrder).catch((err) => {
+      console.warn('[Califnco Shop] Firestore sync warning:', err);
+    });
 
     clearCart();
     return newOrder;
+  };
+
+  const resetLocalCache = async (): Promise<void> => {
+    setCart([]);
+    setOrders([]);
+    await safeStorage.removeItem('califnco_cart');
+    await safeStorage.removeItem('califnco_orders');
+    if (!isAuthenticated) {
+      setUserProfile(EMPTY_GUEST_PROFILE);
+      await safeStorage.removeItem('califnco_profile');
+    }
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
@@ -449,6 +777,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         products,
         filteredProducts,
+        isProductsLoading,
+        productsError,
+        isDemoFallback,
+        refreshProducts,
         selectedCategory,
         setSelectedCategory,
         searchQuery,
@@ -470,6 +802,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         placeOrder,
         selectedOrder,
         setSelectedOrder,
+        resetLocalCache,
         userProfile,
         updateProfile,
         isAuthenticated,
@@ -480,6 +813,24 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        dealerProfile,
+        isDealerApproved,
+        dealerStatus,
+        applyForDealer,
+        isDealerApplyModalVisible,
+        setDealerApplyModalVisible,
+        serviceBookings,
+        isServicesLoading,
+        bookService,
+        refreshServiceBookings,
+        isServiceBookingModalVisible,
+        setServiceBookingModalVisible,
+        notifications,
+        unreadNotificationCount,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        isNotificationsModalVisible,
+        setNotificationsModalVisible,
         isAuthModalVisible,
         setAuthModalVisible,
         activeTab,

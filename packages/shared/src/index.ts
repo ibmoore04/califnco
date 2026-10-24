@@ -74,7 +74,9 @@ export type DealerApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface DealerProfile {
   id: string; // matches userId
+  userId?: string;
   businessName: string;
+  companyName?: string;
   contactPerson: string;
   email: string;
   phone: string;

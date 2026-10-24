@@ -20,6 +20,7 @@ export const Colors = {
     accent: '#06B6D4',
     teal: '#0D9488',
     card: '#FFFFFF',
+    surface: '#FFFFFF',
     border: '#E2E8F0',
     success: '#10B981',
     successLight: '#ECFDF5',
@@ -40,6 +41,7 @@ export const Colors = {
     accent: '#22D3EE',
     teal: '#2DD4BF',
     card: '#0F172A',
+    surface: '#0F172A',
     border: '#1E293B',
     success: '#34D399',
     successLight: '#064E3B',
@@ -58,6 +60,21 @@ export const Typography = {
   semiBold: 'Inter_600SemiBold',
   bold: 'Inter_700Bold',
   extraBold: 'Inter_800ExtraBold',
+  fonts: {
+    heading: 'Inter_700Bold',
+    body: 'Inter_400Regular',
+    bold: 'Inter_700Bold',
+    semiBold: 'Inter_600SemiBold',
+    medium: 'Inter_500Medium',
+  },
+  sizes: {
+    xs: 12,
+    sm: 14,
+    base: 16,
+    lg: 18,
+    xl: 20,
+    xxl: 24,
+  },
 } as const;
 
 export const Fonts = {

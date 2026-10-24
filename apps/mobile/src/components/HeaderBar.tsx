@@ -10,22 +10,9 @@ export const HeaderBar: React.FC = () => {
     cartCount,
     setActiveTab,
     activeTab,
-    isAuthenticated,
-    userProfile,
-    setAuthModalVisible,
+    unreadNotificationCount,
+    setNotificationsModalVisible,
   } = useShop();
-
-  const handleAccountPress = () => {
-    if (!isAuthenticated) {
-      setAuthModalVisible(true);
-    } else {
-      setActiveTab('profile');
-    }
-  };
-
-  const userInitial = userProfile.displayName
-    ? userProfile.displayName[0].toUpperCase()
-    : 'U';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -50,22 +37,25 @@ export const HeaderBar: React.FC = () => {
       </TouchableOpacity>
 
       <View style={styles.actionsRow}>
-        {/* Auth / Account Button */}
+        {/* Notifications Button */}
         <TouchableOpacity
           style={[
-            styles.authBtn,
+            styles.cartButton,
             {
-              backgroundColor: isAuthenticated ? colors.primaryLight : colors.backgroundElement,
-              borderColor: isAuthenticated ? colors.primary : colors.border,
+              backgroundColor: colors.backgroundElement,
+              borderColor: colors.border,
             },
           ]}
           activeOpacity={0.7}
-          onPress={handleAccountPress}
-          accessibilityLabel="Account authentication">
-          {isAuthenticated ? (
-            <Text style={[styles.authInitialText, { color: colors.primary }]}>{userInitial}</Text>
-          ) : (
-            <Text style={styles.authIcon}>👤</Text>
+          onPress={() => setNotificationsModalVisible(true)}
+          accessibilityLabel="Notifications">
+          <Text style={styles.cartIcon}>🔔</Text>
+          {unreadNotificationCount > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.warning }]}>
+              <Text style={styles.badgeText}>
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
 
@@ -79,7 +69,8 @@ export const HeaderBar: React.FC = () => {
             },
           ]}
           activeOpacity={0.7}
-          onPress={() => setActiveTab('cart')}>
+          onPress={() => setActiveTab('cart')}
+          accessibilityLabel="Shopping cart">
           <Text style={styles.cartIcon}>🛒</Text>
           {cartCount > 0 && (
             <View style={[styles.badge, { backgroundColor: colors.primary }]}>

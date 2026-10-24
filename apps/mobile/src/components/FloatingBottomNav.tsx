@@ -15,12 +15,13 @@ export const FloatingBottomNav: React.FC = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
-  const { activeTab, setActiveTab, cartCount, orders } = useShop();
+  const { activeTab, setActiveTab, cartCount, orders, serviceBookings } = useShop();
 
   const navItems: NavItem[] = [
     { id: 'catalogue', label: 'Shop', icon: '🏪' },
     { id: 'cart', label: 'Cart', icon: '🛒', badgeCount: cartCount },
     { id: 'orders', label: 'Orders', icon: '📦', badgeCount: orders.length },
+    { id: 'services', label: 'Service', icon: '🔧', badgeCount: serviceBookings.length },
     { id: 'profile', label: 'Profile', icon: '👤' },
   ];
 

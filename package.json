@@ -10,5 +10,8 @@
     "start:mobile": "npm run --prefix apps/mobile start",
     "start:admin": "npm run --prefix apps/admin dev",
     "build:admin": "npm run --prefix apps/admin build"
+  },
+  "devDependencies": {
+    "firebase-admin": "^14.5.0"
   }
 }

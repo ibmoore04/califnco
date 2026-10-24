@@ -18,7 +18,7 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { addToCart, setSelectedProduct } = useShop();
+  const { addToCart, setSelectedProduct, isDealerApproved } = useShop();
   const [imageError, setImageError] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
 
@@ -138,18 +138,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Price Section */}
         <View style={styles.priceContainer}>
-          <View>
-            <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Retail</Text>
-            <Text style={[styles.priceText, { color: colors.text }]}>
-              ₹{product.price.toLocaleString('en-IN')}
-            </Text>
-          </View>
+          {isDealerApproved ? (
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.priceLabel, { color: '#047857', fontWeight: '700' }]}>Wholesale Tier</Text>
+                <Text style={{ fontSize: 10, color: '#047857' }}>🏢</Text>
+              </View>
+              <Text style={[styles.priceText, { color: '#047857', fontWeight: '800' }]}>
+                ₹{product.wholesalePrice.toLocaleString('en-IN')}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, textDecorationLine: 'line-through' }}>
+                Retail: ₹{product.price.toLocaleString('en-IN')}
+              </Text>
+            </View>
+          ) : (
+            <View>
+              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Retail</Text>
+              <Text style={[styles.priceText, { color: colors.text }]}>
+                ₹{product.price.toLocaleString('en-IN')}
+              </Text>
+            </View>
+          )}
 
-          <View style={[styles.wholesaleTag, { backgroundColor: colors.backgroundElement }]}>
-            <Text style={[styles.wholesaleText, { color: colors.textSecondary }]}>
-              Bulk: <Text style={{ fontWeight: '700', color: colors.primary }}>₹{product.wholesalePrice.toLocaleString('en-IN')}</Text>
-            </Text>
-          </View>
+          {!isDealerApproved && (
+            <View style={[styles.wholesaleTag, { backgroundColor: colors.backgroundElement }]}>
+              <Text style={[styles.wholesaleText, { color: colors.textSecondary }]}>
+                Bulk: <Text style={{ fontWeight: '700', color: colors.primary }}>₹{product.wholesalePrice.toLocaleString('en-IN')}</Text>
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
