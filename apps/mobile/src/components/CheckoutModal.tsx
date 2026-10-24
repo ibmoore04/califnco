@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { Address, Order } from '@shared';
 
@@ -427,10 +427,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerTitle: {
+    fontFamily: Typography.extraBold,
     fontSize: 18,
     fontWeight: '800',
   },
   headerSub: {
+    fontFamily: Typography.regular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -462,11 +464,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   demoBannerTitle: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   demoBannerText: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     lineHeight: 15,
     marginTop: 2,
@@ -475,6 +479,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   sectionTitle: {
+    fontFamily: Typography.bold,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 10,
@@ -489,11 +494,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   itemName: {
+    fontFamily: Typography.medium,
     fontSize: 13,
     flex: 1,
     marginRight: 10,
   },
   itemPrice: {
+    fontFamily: Typography.bold,
     fontSize: 13,
     fontWeight: '600',
   },

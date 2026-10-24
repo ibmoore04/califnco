@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { Product } from '@shared';
 
@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
     fontSize: 44,
   },
   fallbackCategory: {
+    fontFamily: Typography.bold,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
@@ -255,6 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   stockText: {
+    fontFamily: Typography.bold,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -264,6 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   categoryText: {
+    fontFamily: Typography.bold,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
@@ -282,23 +285,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   ratingNumber: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '700',
   },
   reviewsCount: {
+    fontFamily: Typography.regular,
     fontSize: 12,
   },
   title: {
+    fontFamily: Typography.bold,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 20,
     marginBottom: 6,
   },
   specText: {
+    fontFamily: Typography.regular,
     fontSize: 12,
     marginBottom: 10,
   },
   specVal: {
+    fontFamily: Typography.semiBold,
     fontWeight: '600',
   },
   priceContainer: {
@@ -311,11 +319,13 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.05)',
   },
   priceLabel: {
+    fontFamily: Typography.semiBold,
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   priceText: {
+    fontFamily: Typography.extraBold,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -325,6 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   wholesaleText: {
+    fontFamily: Typography.medium,
     fontSize: 11,
   },
   actionRow: {
@@ -340,6 +351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   detailsBtnText: {
+    fontFamily: Typography.semiBold,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -351,6 +363,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addBtnText: {
+    fontFamily: Typography.bold,
     fontSize: 13,
     fontWeight: '700',
   },

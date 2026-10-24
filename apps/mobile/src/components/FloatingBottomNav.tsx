@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Platform } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop, TabType } from '@/context/ShopContext';
 
 interface NavItem {
@@ -13,6 +14,7 @@ interface NavItem {
 export const FloatingBottomNav: React.FC = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
   const { activeTab, setActiveTab, cartCount, orders } = useShop();
 
   const navItems: NavItem[] = [
@@ -23,7 +25,15 @@ export const FloatingBottomNav: React.FC = () => {
   ];
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 10),
+        },
+      ]}>
       <View style={styles.navRow}>
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -58,6 +68,7 @@ export const FloatingBottomNav: React.FC = () => {
                 style={[
                   styles.tabLabel,
                   {
+                    fontFamily: isActive ? Typography.bold : Typography.medium,
                     color: isActive ? colors.primary : colors.textSecondary,
                     fontWeight: isActive ? '700' : '500',
                   },
@@ -76,7 +87,6 @@ const styles = StyleSheet.create({
   wrapper: {
     borderTopWidth: 1,
     paddingVertical: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -121,6 +131,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '800',

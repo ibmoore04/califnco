@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { ProductCategory } from '@shared';
 
@@ -106,10 +106,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pillLabel: {
+    fontFamily: Typography.medium,
     fontSize: 13,
     fontWeight: '500',
   },
   pillLabelSelected: {
+    fontFamily: Typography.bold,
     fontWeight: '700',
   },
   countBadge: {
@@ -119,6 +121,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   countText: {
+    fontFamily: Typography.bold,
     fontSize: 11,
     fontWeight: '700',
   },

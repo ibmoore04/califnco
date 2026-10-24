@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
 export const ProfileView: React.FC = () => {
@@ -444,6 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
+    fontFamily: Typography.extraBold,
     color: '#ffffff',
     fontSize: 22,
     fontWeight: '800',
@@ -452,10 +453,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
+    fontFamily: Typography.extraBold,
     fontSize: 18,
     fontWeight: '800',
   },
   profileEmail: {
+    fontFamily: Typography.regular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -470,6 +473,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   roleBadgeText: {
+    fontFamily: Typography.bold,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -487,10 +491,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   authActionTitle: {
+    fontFamily: Typography.bold,
     fontSize: 14,
     fontWeight: '700',
   },
   authActionSub: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     marginTop: 2,
     lineHeight: 15,
@@ -501,6 +507,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   signInBtnText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
@@ -512,6 +519,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   signOutBtnText: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '700',
   },

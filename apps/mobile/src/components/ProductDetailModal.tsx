@@ -9,12 +9,14 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
 export const ProductDetailModal: React.FC = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
   const { selectedProduct, setSelectedProduct, addToCart } = useShop();
   const [quantity, setQuantity] = useState(1);
   const [imageError, setImageError] = useState(false);
@@ -287,11 +289,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   categoryPillText: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
   stockText: {
+    fontFamily: Typography.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -327,6 +331,7 @@ const styles = StyleSheet.create({
     fontSize: 56,
   },
   fallbackTitle: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -345,13 +350,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   ratingNumber: {
+    fontFamily: Typography.bold,
     fontSize: 13,
     fontWeight: '700',
   },
   reviewsCount: {
+    fontFamily: Typography.regular,
     fontSize: 13,
   },
   title: {
+    fontFamily: Typography.extraBold,
     fontSize: 20,
     fontWeight: '800',
     lineHeight: 26,
@@ -366,11 +374,13 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   priceTagLabel: {
+    fontFamily: Typography.semiBold,
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 2,
   },
   priceAmount: {
+    fontFamily: Typography.extraBold,
     fontSize: 22,
     fontWeight: '800',
   },
@@ -378,26 +388,31 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   wholesaleHead: {
+    fontFamily: Typography.bold,
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   wholesaleVal: {
+    fontFamily: Typography.extraBold,
     fontSize: 16,
     fontWeight: '800',
   },
   wholesaleMoq: {
+    fontFamily: Typography.regular,
     fontSize: 10,
   },
   section: {
     marginBottom: 20,
   },
   sectionHeading: {
+    fontFamily: Typography.bold,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 8,
   },
   descriptionText: {
+    fontFamily: Typography.regular,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -412,11 +427,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   specKey: {
+    fontFamily: Typography.semiBold,
     width: '40%',
     fontSize: 12,
     fontWeight: '600',
   },
   specValue: {
+    fontFamily: Typography.regular,
     width: '60%',
     fontSize: 12,
   },
@@ -433,11 +450,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   guaranteeTitle: {
+    fontFamily: Typography.bold,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 2,
   },
   guaranteeDesc: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -462,10 +481,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qtyBtnText: {
+    fontFamily: Typography.bold,
     fontSize: 18,
     fontWeight: '700',
   },
   qtyNumber: {
+    fontFamily: Typography.bold,
     fontSize: 16,
     fontWeight: '700',
     minWidth: 20,
@@ -479,6 +500,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addToCartText: {
+    fontFamily: Typography.bold,
     fontSize: 15,
     fontWeight: '700',
   },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
 export const HeaderBar: React.FC = () => {
@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   brandTitle: {
+    fontFamily: Typography.extraBold,
     fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -132,12 +133,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   pureBadgeText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   brandSubtitle: {
+    fontFamily: Typography.medium,
     fontSize: 11,
     fontWeight: '500',
   },
@@ -158,6 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   authInitialText: {
+    fontFamily: Typography.bold,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -187,6 +191,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   badgeText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 10,
     fontWeight: '700',

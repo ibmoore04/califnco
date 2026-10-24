@@ -8,7 +8,7 @@ import {
   Modal,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop, SortOption } from '@/context/ShopContext';
 
 const SORT_OPTIONS: { id: SortOption; label: string; icon: string }[] = [
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   input: {
+    fontFamily: Typography.regular,
     flex: 1,
     fontSize: 14,
     height: '100%',
@@ -191,6 +192,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sortText: {
+    fontFamily: Typography.semiBold,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -202,12 +204,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   metaText: {
+    fontFamily: Typography.regular,
     fontSize: 12,
   },
   metaHighlight: {
+    fontFamily: Typography.bold,
     fontWeight: '700',
   },
   activeSortText: {
+    fontFamily: Typography.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -240,6 +245,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   modalTitle: {
+    fontFamily: Typography.bold,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -262,6 +268,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   optionLabel: {
+    fontFamily: Typography.medium,
     fontSize: 14,
     flex: 1,
   },

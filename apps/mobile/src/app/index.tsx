@@ -4,11 +4,13 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   useColorScheme,
-  StatusBar,
+  StatusBar as RNStatusBar,
+  Platform,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { HeaderBar } from '@/components/HeaderBar';
 import { CategoryFilter } from '@/components/CategoryFilter';
@@ -24,6 +26,7 @@ import { AuthModal } from '@/components/AuthModal';
 export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
   const {
     activeTab,
     filteredProducts,
@@ -33,11 +36,15 @@ export default function HomeScreen() {
     setAuthModalVisible,
   } = useShop();
 
+  // Android status bar offset: ensure top inset clears status bar and camera punch-hole / notch
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (RNStatusBar.currentHeight || 28) : 0
+  );
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <StatusBar
-        barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-      />
+    <View style={[styles.rootContainer, { backgroundColor: colors.background, paddingTop: topInset }]}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
 
       {/* Top Brand Header Bar */}
       <HeaderBar />
@@ -115,12 +122,12 @@ export default function HomeScreen() {
         visible={isAuthModalVisible}
         onClose={() => setAuthModalVisible(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  rootContainer: {
     flex: 1,
   },
   contentContainer: {
@@ -144,11 +151,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   emptySearchTitle: {
+    fontFamily: Typography.bold,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
   emptySearchSubtitle: {
+    fontFamily: Typography.regular,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
@@ -181,12 +190,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroTagText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   heroHeading: {
+    fontFamily: Typography.extraBold,
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
@@ -194,6 +205,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroSub: {
+    fontFamily: Typography.regular,
     color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 11,
     lineHeight: 15,

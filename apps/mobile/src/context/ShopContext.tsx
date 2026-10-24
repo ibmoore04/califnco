@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '@/services/storage';
 import {
   Product,
   CartItem,
@@ -223,7 +223,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const hydrateStorage = async () => {
       try {
-        const savedOrders = await AsyncStorage.getItem('califnco_orders');
+        const savedOrders = await safeStorage.getItem('califnco_orders');
         if (savedOrders) {
           const parsed = JSON.parse(savedOrders);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -231,7 +231,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        const savedCart = await AsyncStorage.getItem('califnco_cart');
+        const savedCart = await safeStorage.getItem('califnco_cart');
         if (savedCart) {
           const parsedCart = JSON.parse(savedCart);
           if (Array.isArray(parsedCart)) {
@@ -239,7 +239,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        const savedProfile = await AsyncStorage.getItem('califnco_profile');
+        const savedProfile = await safeStorage.getItem('califnco_profile');
         if (savedProfile) {
           const parsedProfile = JSON.parse(savedProfile);
           if (parsedProfile && parsedProfile.displayName) {
@@ -275,12 +275,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Persist cart changes
   useEffect(() => {
-    AsyncStorage.setItem('califnco_cart', JSON.stringify(cart)).catch(() => {});
+    safeStorage.setItem('califnco_cart', JSON.stringify(cart)).catch(() => {});
   }, [cart]);
 
   // Persist profile changes
   useEffect(() => {
-    AsyncStorage.setItem('califnco_profile', JSON.stringify(userProfile)).catch(() => {});
+    safeStorage.setItem('califnco_profile', JSON.stringify(userProfile)).catch(() => {});
   }, [userProfile]);
 
   // Firebase Authentication Actions
@@ -292,7 +292,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profile = await signInWithEmail(email, password);
         setUserProfile(profile);
         setIsAuthenticated(true);
-        await AsyncStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true }));
+        safeStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true })).catch(() => {});
         setIsAuthLoading(false);
         return { success: true };
       } else {
@@ -306,7 +306,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setUserProfile(demoProfile);
         setIsAuthenticated(true);
-        await AsyncStorage.setItem('califnco_profile', JSON.stringify(demoProfile));
+        safeStorage.setItem('califnco_profile', JSON.stringify(demoProfile)).catch(() => {});
         setIsAuthLoading(false);
         return { success: true };
       }
@@ -328,10 +328,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       if (isFirebaseConfigured) {
-        const profile = await signUpWithEmail(email, password, displayName, phone);
+        let profile: UserProfile;
+        try {
+          profile = await signUpWithEmail(email, password, displayName, phone);
+        } catch (signupErr: any) {
+          // If the account was already created during an earlier interrupted attempt, attempt sign-in
+          if (signupErr?.code === 'auth/email-already-in-use') {
+            profile = await signInWithEmail(email, password);
+          } else {
+            throw signupErr;
+          }
+        }
         setUserProfile(profile);
         setIsAuthenticated(true);
-        await AsyncStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true }));
+        safeStorage.setItem('califnco_profile', JSON.stringify({ ...profile, isFirebaseAuth: true })).catch(() => {});
         setIsAuthLoading(false);
         return { success: true };
       } else {
@@ -346,7 +356,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setUserProfile(demoProfile);
         setIsAuthenticated(true);
-        await AsyncStorage.setItem('califnco_profile', JSON.stringify(demoProfile));
+        safeStorage.setItem('califnco_profile', JSON.stringify(demoProfile)).catch(() => {});
         setIsAuthLoading(false);
         return { success: true };
       }
@@ -368,7 +378,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsAuthenticated(false);
     setUserProfile(INITIAL_DEMO_PROFILE);
-    await AsyncStorage.removeItem('califnco_profile');
+    safeStorage.removeItem('califnco_profile').catch(() => {});
   };
 
   // Filter & Sort Products
@@ -503,7 +513,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
-      AsyncStorage.setItem('califnco_orders', JSON.stringify(updated)).catch(() => {});
+      safeStorage.setItem('califnco_orders', JSON.stringify(updated)).catch(() => {});
       return updated;
     });
 

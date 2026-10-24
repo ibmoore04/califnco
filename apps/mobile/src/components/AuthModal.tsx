@@ -11,8 +11,10 @@ import {
   Platform,
   ScrollView,
   useColorScheme,
+  StatusBar,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
 interface AuthModalProps {
@@ -23,6 +25,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
   const { login, register, isAuthLoading, authError, clearAuthError, isFirebaseActive } = useShop();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -82,7 +85,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
       onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}>
+        style={[
+          styles.overlay,
+          {
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 0) + 16,
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}>
         <View style={[styles.dialog, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -307,10 +316,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   title: {
+    fontFamily: Typography.extraBold,
     fontSize: 18,
     fontWeight: '800',
   },
   subtitle: {
+    fontFamily: Typography.medium,
     fontSize: 12,
   },
   closeBtn: {
@@ -321,6 +332,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeBtnText: {
+    fontFamily: Typography.bold,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -351,6 +363,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tabBtnText: {
+    fontFamily: Typography.semiBold,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -367,6 +380,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorText: {
+    fontFamily: Typography.semiBold,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
@@ -376,11 +390,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   inputLabel: {
+    fontFamily: Typography.semiBold,
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 6,
   },
   inputField: {
+    fontFamily: Typography.regular,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -401,6 +417,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   infoBannerText: {
+    fontFamily: Typography.medium,
     fontSize: 11,
     lineHeight: 16,
     flex: 1,
@@ -417,6 +434,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitBtnText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
@@ -428,6 +446,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   demoBtnText: {
+    fontFamily: Typography.semiBold,
     fontSize: 12,
     fontWeight: '600',
   },

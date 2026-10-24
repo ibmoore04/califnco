@@ -9,7 +9,7 @@ import {
   Image,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { Order, OrderStatus } from '@shared';
 
@@ -368,10 +368,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
+    fontFamily: Typography.extraBold,
     fontSize: 22,
     fontWeight: '800',
   },
   subtitle: {
+    fontFamily: Typography.regular,
     fontSize: 13,
     marginTop: 2,
   },
@@ -390,10 +392,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   orderId: {
+    fontFamily: Typography.extraBold,
     fontSize: 15,
     fontWeight: '800',
   },
   orderDate: {
+    fontFamily: Typography.regular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -403,6 +407,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusText: {
+    fontFamily: Typography.bold,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -412,10 +417,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   previewItemText: {
+    fontFamily: Typography.medium,
     fontSize: 12,
     fontWeight: '500',
   },
   moreItemsText: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     fontStyle: 'italic',
     marginTop: 2,
@@ -427,9 +434,11 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   totalLabel: {
+    fontFamily: Typography.regular,
     fontSize: 11,
   },
   totalPrice: {
+    fontFamily: Typography.extraBold,
     fontSize: 17,
     fontWeight: '800',
   },
@@ -439,6 +448,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   detailsLinkText: {
+    fontFamily: Typography.bold,
     fontSize: 12,
     fontWeight: '700',
   },

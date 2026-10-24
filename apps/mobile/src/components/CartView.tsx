@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from 'react-native';
-import { Colors } from '@/constants/theme';
+import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 import { CheckoutModal } from './CheckoutModal';
 
@@ -198,14 +198,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pageTitle: {
+    fontFamily: Typography.extraBold,
     fontSize: 22,
     fontWeight: '800',
   },
   pageSubtitle: {
+    fontFamily: Typography.regular,
     fontSize: 13,
     marginTop: 2,
   },
   clearBtnText: {
+    fontFamily: Typography.semiBold,
     fontSize: 13,
     fontWeight: '600',
     paddingVertical: 4,
@@ -246,6 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   itemName: {
+    fontFamily: Typography.bold,
     fontSize: 14,
     fontWeight: '700',
     flex: 1,
@@ -257,6 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   itemCategory: {
+    fontFamily: Typography.semiBold,
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'capitalize',
@@ -269,10 +274,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   itemPrice: {
+    fontFamily: Typography.extraBold,
     fontSize: 15,
     fontWeight: '800',
   },
   unitPrice: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     fontWeight: '400',
   },
@@ -290,10 +297,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepBtnText: {
+    fontFamily: Typography.bold,
     fontSize: 16,
     fontWeight: '700',
   },
   stepQty: {
+    fontFamily: Typography.bold,
     fontSize: 13,
     fontWeight: '700',
     minWidth: 24,
@@ -307,6 +316,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   summaryTitle: {
+    fontFamily: Typography.bold,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
@@ -322,6 +332,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   taxInfoTag: {
+    fontFamily: Typography.bold,
     fontSize: 9,
     fontWeight: '700',
     paddingHorizontal: 6,
@@ -329,9 +340,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   summaryLabel: {
+    fontFamily: Typography.regular,
     fontSize: 13,
   },
   summaryVal: {
+    fontFamily: Typography.semiBold,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -340,10 +353,12 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   grandTotalLabel: {
+    fontFamily: Typography.extraBold,
     fontSize: 16,
     fontWeight: '800',
   },
   grandTotalVal: {
+    fontFamily: Typography.extraBold,
     fontSize: 20,
     fontWeight: '800',
   },
@@ -359,6 +374,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   assuranceText: {
+    fontFamily: Typography.regular,
     fontSize: 11,
     flex: 1,
     lineHeight: 15,
@@ -375,6 +391,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   checkoutBtnText: {
+    fontFamily: Typography.extraBold,
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
@@ -397,11 +414,13 @@ const styles = StyleSheet.create({
     fontSize: 36,
   },
   emptyTitle: {
+    fontFamily: Typography.extraBold,
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily: Typography.regular,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
@@ -413,6 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   browseBtnText: {
+    fontFamily: Typography.bold,
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
