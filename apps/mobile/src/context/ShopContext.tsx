@@ -16,6 +16,8 @@ import {
   signOutUser,
   subscribeToAuthChanges,
   syncOrderToFirestore,
+  fetchUserOrdersFromFirestore,
+  fetchProductsFromFirestore,
   formatFirebaseAuthError,
 } from '@/services/firebase';
 
@@ -78,135 +80,30 @@ interface ShopContextType {
   setActiveTab: (tab: TabType) => void;
 }
 
-// Initial Sample Orders for immediate testing & realistic demonstration
-const INITIAL_DEMO_ORDERS: Order[] = [
-  {
-    id: 'CAL-2026-7841',
-    userId: 'usr_cust_demo_01',
-    userEmail: 'customer@califnco.demo',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'purifier-aqua-grand-plus-12l',
-        productName: 'AquaGrand+ RO+UV+UF+TDS Controller 12L Purifier',
-        category: 'purifiers',
-        unitPrice: 13999,
-        quantity: 1,
-        totalPrice: 13999,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        productId: 'filter-sediment-spun-5micron-10inch',
-        productName: 'PureShield 5-Micron 10-Inch Spun Polypropylene Sediment Filter',
-        category: 'filters',
-        unitPrice: 249,
-        quantity: 2,
-        totalPrice: 498,
-        imageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 14497,
-    taxAmount: 2609.46,
-    totalAmount: 17106.46,
-    shippingAddress: {
-      fullName: 'Ibrahim Olatunde',
-      phone: '9876543210',
-      street: '402, Silicon Heights, 12th Main, HSR Layout',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560102',
-    },
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_994821a',
-    createdAt: '2026-10-18T14:30:00.000Z',
-    updatedAt: '2026-10-21T11:00:00.000Z',
-  },
-  {
-    id: 'CAL-2026-8194',
-    userId: 'usr_cust_demo_01',
-    userEmail: 'customer@califnco.demo',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'filter-alkaline-mineral-cartridge-post-ro',
-        productName: 'BioAlkaline Remineralization Cartridge with Anti-Oxidant Balls',
-        category: 'filters',
-        unitPrice: 899,
-        quantity: 1,
-        totalPrice: 899,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        productId: 'spare-solenoid-valve-24v-slx',
-        productName: 'Precision 24V DC Push-Fit Magnetic Water Solenoid Valve (SV)',
-        category: 'spares',
-        unitPrice: 450,
-        quantity: 1,
-        totalPrice: 450,
-        imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 1349,
-    taxAmount: 242.82,
-    totalAmount: 1591.82,
-    shippingAddress: {
-      fullName: 'Ibrahim Olatunde',
-      phone: '9876543210',
-      street: '402, Silicon Heights, 12th Main, HSR Layout',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560102',
-    },
-    status: 'processing',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_881920b',
-    createdAt: '2026-10-22T09:15:00.000Z',
-    updatedAt: '2026-10-22T10:00:00.000Z',
-  },
-];
-
-const INITIAL_DEMO_PROFILE: UserProfile = {
-  uid: 'usr_cust_demo_01',
-  displayName: 'Ibrahim Olatunde',
-  email: 'customer@califnco.demo',
-  phone: '9876543210',
+// Clean guest profile (Zero hardcoding)
+const EMPTY_GUEST_PROFILE: UserProfile = {
+  uid: '',
+  displayName: '',
+  email: '',
+  phone: '',
   role: 'customer',
-  defaultAddress: {
-    fullName: 'Ibrahim Olatunde',
-    phone: '9876543210',
-    street: '402, Silicon Heights, 12th Main, HSR Layout',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    postalCode: '560102',
-  },
-  referralCode: 'CALIF-PURE-2026',
-  createdAt: '2026-01-10T00:00:00.000Z',
+  createdAt: new Date().toISOString(),
 };
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('featured');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const [cart, setCart] = useState<CartItem[]>([
-    // Start with 1 item in cart to make instant testing convenient
-    {
-      product: INITIAL_PRODUCTS[0], // AquaGrand+
-      quantity: 1,
-      pricePerUnit: INITIAL_PRODUCTS[0].price,
-    },
-  ]);
-
-  const [orders, setOrders] = useState<Order[]>(INITIAL_DEMO_ORDERS);
+  // Initialize completely empty - zero hardcoded data
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_DEMO_PROFILE);
+  const [userProfile, setUserProfile] = useState<UserProfile>(EMPTY_GUEST_PROFILE);
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
 
   // Firebase Auth states
@@ -249,6 +146,18 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         }
+
+        // Fetch live catalog from Firestore backend
+        if (isFirebaseConfigured) {
+          try {
+            const backendProducts = await fetchProductsFromFirestore();
+            if (backendProducts && backendProducts.length > 0) {
+              setProducts(backendProducts);
+            }
+          } catch (pErr) {
+            console.warn('[Califnco Shop] Could not load products from Firestore:', pErr);
+          }
+        }
       } catch (err) {
         console.warn('[Califnco Storage] Could not hydrate stored data:', err);
       }
@@ -257,7 +166,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen to Firebase Auth state
     if (isFirebaseConfigured) {
-      const unsubscribe = subscribeToAuthChanges((firebaseUser) => {
+      const unsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
         if (firebaseUser) {
           setIsAuthenticated(true);
           setUserProfile((prev) => ({
@@ -267,6 +176,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: firebaseUser.displayName || prev.displayName,
             role: 'customer',
           }));
+          const remoteOrders = await fetchUserOrdersFromFirestore(firebaseUser.uid);
+          if (remoteOrders && remoteOrders.length > 0) {
+            setOrders(remoteOrders);
+            safeStorage.setItem('califnco_orders', JSON.stringify(remoteOrders)).catch(() => {});
+          }
         }
       });
       return () => unsubscribe();
@@ -377,8 +291,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('[Califnco Auth] Sign out error:', err);
     }
     setIsAuthenticated(false);
-    setUserProfile(INITIAL_DEMO_PROFILE);
+    setUserProfile(EMPTY_GUEST_PROFILE);
+    setOrders([]);
     safeStorage.removeItem('califnco_profile').catch(() => {});
+    safeStorage.removeItem('califnco_orders').catch(() => {});
   };
 
   // Filter & Sort Products

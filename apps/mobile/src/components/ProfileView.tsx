@@ -81,16 +81,16 @@ export const ProfileView: React.FC = () => {
 
           <View style={styles.profileHeaderInfo}>
             <Text style={[styles.profileName, { color: colors.text }]}>
-              {userProfile.displayName}
+              {userProfile.displayName || 'Guest User'}
             </Text>
             <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
-              {userProfile.email}
+              {userProfile.email || 'Sign in to access your account'}
             </Text>
 
             <View style={styles.badgeRow}>
               <View style={[styles.roleBadge, { backgroundColor: colors.primaryLight }]}>
                 <Text style={[styles.roleBadgeText, { color: colors.primary }]}>
-                  {isAuthenticated ? 'Firebase Customer' : 'Verified Customer'}
+                  {isAuthenticated ? 'Firebase Customer' : 'Guest Account'}
                 </Text>
               </View>
               <View

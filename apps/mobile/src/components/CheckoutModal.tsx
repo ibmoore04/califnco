@@ -134,7 +134,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ visible, onClose }
 
           {confirmedOrder ? (
             /* Order Success View */
-            <ScrollView style={styles.scrollArea} contentContainerStyle={styles.successContent}>
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.successContent}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={[styles.successIconCircle, { backgroundColor: colors.successLight }]}>
                 <Text style={styles.successCheckmark}>✓</Text>
               </View>

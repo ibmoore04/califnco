@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   INITIAL_PRODUCTS,
   type Product,
@@ -8,290 +8,16 @@ import {
   type DealerProfile,
   type ServiceBooking,
 } from '@shared';
-
-// Initial dynamic orders dataset
-const INITIAL_ADMIN_ORDERS: Order[] = [
-  {
-    id: 'CAL-2026-7841',
-    userId: 'usr_cust_01',
-    userEmail: 'alex.verma@example.com',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'purifier-aqua-grand-plus-12l',
-        productName: 'AquaGrand+ RO+UV+UF+TDS Controller 12L Purifier',
-        category: 'purifiers',
-        unitPrice: 13999,
-        quantity: 1,
-        totalPrice: 13999,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        productId: 'filter-sediment-spun-5micron-10inch',
-        productName: 'PureShield 5-Micron 10-Inch Spun Polypropylene Sediment Filter',
-        category: 'filters',
-        unitPrice: 249,
-        quantity: 2,
-        totalPrice: 498,
-        imageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 14497,
-    taxAmount: 2609.46,
-    totalAmount: 17106.46,
-    shippingAddress: {
-      fullName: 'Alex Verma',
-      phone: '9876543210',
-      street: '402, Silicon Heights, 12th Main, HSR Layout',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560102',
-    },
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_994821a',
-    createdAt: '2026-10-18T14:30:00.000Z',
-    updatedAt: '2026-10-21T11:00:00.000Z',
-  },
-  {
-    id: 'CAL-2026-8194',
-    userId: 'usr_cust_02',
-    userEmail: 'rohit.sharma@example.com',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'filter-alkaline-mineral-cartridge-post-ro',
-        productName: 'BioAlkaline Remineralization Cartridge with Anti-Oxidant Balls',
-        category: 'filters',
-        unitPrice: 899,
-        quantity: 2,
-        totalPrice: 1798,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        productId: 'spare-solenoid-valve-24v-slx',
-        productName: 'Precision 24V DC Push-Fit Magnetic Water Solenoid Valve (SV)',
-        category: 'spares',
-        unitPrice: 450,
-        quantity: 1,
-        totalPrice: 450,
-        imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 2248,
-    taxAmount: 404.64,
-    totalAmount: 2652.64,
-    shippingAddress: {
-      fullName: 'Rohit Sharma',
-      phone: '9845123456',
-      street: 'Flat 104, Green Meadows, Whitefield',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560066',
-    },
-    status: 'processing',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_881920b',
-    createdAt: '2026-10-22T09:15:00.000Z',
-    updatedAt: '2026-10-22T10:00:00.000Z',
-  },
-  {
-    id: 'CAL-2026-9042',
-    userId: 'usr_deal_01',
-    userEmail: 'apex.purifiers@dealernet.in',
-    userRole: 'dealer',
-    items: [
-      {
-        productId: 'pump-booster-75gpd-24vdc',
-        productName: 'VoltForce 75 GPD Domestic RO Booster Pump (24V DC)',
-        category: 'pumps',
-        unitPrice: 1190,
-        quantity: 10,
-        totalPrice: 11900,
-      },
-      {
-        productId: 'filter-membrane-ro-75gpd-tfc',
-        productName: 'Dow-FilmTec Grade 75 GPD Thin Film Composite (TFC) RO Membrane',
-        category: 'filters',
-        unitPrice: 950,
-        quantity: 10,
-        totalPrice: 9500,
-      },
-    ],
-    subtotal: 21400,
-    taxAmount: 3852.0,
-    totalAmount: 25252.0,
-    shippingAddress: {
-      fullName: 'Apex Water Systems (Dealer)',
-      phone: '9900112233',
-      street: 'Shop 12, Industrial Area, Peenya 2nd Stage',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560058',
-    },
-    status: 'pending',
-    paymentStatus: 'pending',
-    paymentMethod: 'cod',
-    createdAt: '2026-10-24T08:00:00.000Z',
-    updatedAt: '2026-10-24T08:00:00.000Z',
-  },
-  {
-    id: 'CAL-2026-9115',
-    userId: 'usr_cust_03',
-    userEmail: 'priya.nair@example.com',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'dispenser-hot-cold-floor-standing-compressor',
-        productName: 'PureChill Commercial Hot & Cold Floor-Standing Water Dispenser',
-        category: 'dispensers',
-        unitPrice: 9499,
-        quantity: 1,
-        totalPrice: 9499,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 9499,
-    taxAmount: 1709.82,
-    totalAmount: 11208.82,
-    shippingAddress: {
-      fullName: 'Priya Nair',
-      phone: '9123456780',
-      street: '22, Indiranagar 100ft Road',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560038',
-    },
-    status: 'shipped',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_774910c',
-    createdAt: '2026-10-23T11:20:00.000Z',
-    updatedAt: '2026-10-23T16:00:00.000Z',
-  },
-  {
-    id: 'CAL-2026-9280',
-    userId: 'usr_cust_04',
-    userEmail: 'manish.kumar@example.com',
-    userRole: 'customer',
-    items: [
-      {
-        productId: 'purifier-alkaline-copper-ro-10l',
-        productName: 'CopperPure Active Alkaline + Copper Infused 10L RO Water Purifier',
-        category: 'purifiers',
-        unitPrice: 15499,
-        quantity: 1,
-        totalPrice: 15499,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    subtotal: 15499,
-    taxAmount: 2789.82,
-    totalAmount: 18288.82,
-    shippingAddress: {
-      fullName: 'Manish Kumar',
-      phone: '9844001122',
-      street: 'B-303, Prestige Palms, Koramangala',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560034',
-    },
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'razorpay',
-    razorpayPaymentId: 'pay_test_661900d',
-    createdAt: '2026-10-14T10:00:00.000Z',
-    updatedAt: '2026-10-17T12:00:00.000Z',
-  },
-];
-
-// Initial dynamic dealers dataset
-const INITIAL_DEALERS: DealerProfile[] = [
-  {
-    id: 'usr_deal_01',
-    businessName: 'Apex Water Systems & Spares',
-    contactPerson: 'Suresh Gowda',
-    email: 'apex.purifiers@dealernet.in',
-    phone: '9900112233',
-    gstNumber: '29ABCDE1234F1Z5',
-    address: {
-      fullName: 'Apex Water Systems',
-      phone: '9900112233',
-      street: 'Shop 12, Industrial Area, Peenya 2nd Stage',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560058',
-    },
-    status: 'approved',
-    appliedAt: '2026-09-15T10:00:00.000Z',
-    reviewedAt: '2026-09-16T14:30:00.000Z',
-  },
-  {
-    id: 'usr_deal_02',
-    businessName: 'Cauvery Water Technologies',
-    contactPerson: 'Karthik Raman',
-    email: 'karthik@cauverywater.com',
-    phone: '9845112244',
-    gstNumber: '33AABCT9876Q1ZB',
-    address: {
-      fullName: 'Cauvery Water Technologies',
-      phone: '9845112244',
-      street: '45, Mount Road, T Nagar',
-      city: 'Chennai',
-      state: 'Tamil Nadu',
-      postalCode: '600017',
-    },
-    status: 'pending',
-    appliedAt: '2026-10-23T15:20:00.000Z',
-  },
-];
-
-// Initial dynamic service bookings dataset
-const INITIAL_SERVICES: ServiceBooking[] = [
-  {
-    id: 'SRV-2026-101',
-    userId: 'usr_cust_01',
-    customerName: 'Alex Verma',
-    customerPhone: '9876543210',
-    serviceType: 'installation',
-    preferredDate: '2026-10-25',
-    preferredTimeSlot: '10:00 AM - 1:00 PM',
-    address: {
-      fullName: 'Alex Verma',
-      phone: '9876543210',
-      street: '402, Silicon Heights, 12th Main, HSR Layout',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560102',
-    },
-    status: 'scheduled',
-    technicianAssigned: 'Ramesh Babu (Tech ID #T-104)',
-    createdAt: '2026-10-24T09:00:00.000Z',
-    updatedAt: '2026-10-24T09:30:00.000Z',
-  },
-  {
-    id: 'SRV-2026-102',
-    userId: 'usr_cust_02',
-    customerName: 'Rohit Sharma',
-    customerPhone: '9845123456',
-    serviceType: 'filter_replacement',
-    preferredDate: '2026-10-26',
-    preferredTimeSlot: '2:00 PM - 5:00 PM',
-    address: {
-      fullName: 'Rohit Sharma',
-      phone: '9845123456',
-      street: 'Flat 104, Green Meadows, Whitefield',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      postalCode: '560066',
-    },
-    status: 'submitted',
-    createdAt: '2026-10-24T11:15:00.000Z',
-    updatedAt: '2026-10-24T11:15:00.000Z',
-  },
-];
+import {
+  collection,
+  onSnapshot,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { adminDb } from './lib/firebase';
 
 type NavSection = 'dashboard' | 'orders' | 'catalog' | 'dealers' | 'services' | 'notifications';
 type TimeRange = 'today' | '7days' | '30days' | '90days' | 'custom';
@@ -299,10 +25,12 @@ type MetricFilter = 'revenue' | 'orders' | 'fulfilled';
 
 export function App() {
   const [activeNav, setActiveNav] = useState<NavSection>('dashboard');
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ADMIN_ORDERS);
-  const [dealers, setDealers] = useState<DealerProfile[]>(INITIAL_DEALERS);
-  const [services] = useState<ServiceBooking[]>(INITIAL_SERVICES);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [dealers, setDealers] = useState<DealerProfile[]>([]);
+  const [services, setServices] = useState<ServiceBooking[]>([]);
+  const [isSeeding, setIsSeeding] = useState<boolean>(false);
+  const [, setIsBackendLoading] = useState<boolean>(true);
 
   // Filter States
   const [timeRange, setTimeRange] = useState<TimeRange>('30days');
@@ -337,13 +65,75 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // =========================================================================
-  // DYNAMIC CALCULATIONS (Zero Hardcoding)
-  // =========================================================================
+  // Real-time Firestore Subscriptions (Direct from Backend Database)
+  useEffect(() => {
+    if (!adminDb) {
+      setIsBackendLoading(false);
+      return;
+    }
 
-  // 1. Time-filtered orders
+    const unsubProducts = onSnapshot(
+      collection(adminDb, 'products'),
+      (snapshot) => {
+        const list: Product[] = [];
+        snapshot.forEach((d) => list.push(d.data() as Product));
+        setProducts(list);
+        setIsBackendLoading(false);
+      },
+      (err) => {
+        console.warn('[Admin Firestore] Products subscription warning:', err);
+        setIsBackendLoading(false);
+      }
+    );
+
+    const unsubOrders = onSnapshot(
+      collection(adminDb, 'orders'),
+      (snapshot) => {
+        const list: Order[] = [];
+        snapshot.forEach((d) => list.push(d.data() as Order));
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(list);
+      },
+      (err) => {
+        console.warn('[Admin Firestore] Orders subscription warning:', err);
+      }
+    );
+
+    const unsubDealers = onSnapshot(
+      collection(adminDb, 'dealers'),
+      (snapshot) => {
+        const list: DealerProfile[] = [];
+        snapshot.forEach((d) => list.push(d.data() as DealerProfile));
+        setDealers(list);
+      },
+      (err) => {
+        console.warn('[Admin Firestore] Dealers subscription warning:', err);
+      }
+    );
+
+    const unsubServices = onSnapshot(
+      collection(adminDb, 'services'),
+      (snapshot) => {
+        const list: ServiceBooking[] = [];
+        snapshot.forEach((d) => list.push(d.data() as ServiceBooking));
+        setServices(list);
+      },
+      (err) => {
+        console.warn('[Admin Firestore] Services subscription warning:', err);
+      }
+    );
+
+    return () => {
+      unsubProducts();
+      unsubOrders();
+      unsubDealers();
+      unsubServices();
+    };
+  }, []);
+
+  // Dynamic Time-filtered Orders based on real current date
   const filteredOrdersByTime = useMemo(() => {
-    const now = new Date('2026-10-24T23:59:59.000Z').getTime();
+    const now = new Date().getTime();
     return orders.filter((order) => {
       const orderTime = new Date(order.createdAt).getTime();
       const diffDays = (now - orderTime) / (1000 * 60 * 60 * 24);
@@ -363,7 +153,7 @@ export function App() {
     });
   }, [orders, timeRange]);
 
-  // 2. Dynamic KPI Telemetry Cards
+  // Dynamic KPI Telemetry Cards (All zero if database is empty)
   const activeDeliveriesCount = useMemo(() => {
     return orders.filter((o) => o.status === 'shipped' || o.status === 'processing').length;
   }, [orders]);
@@ -377,12 +167,14 @@ export function App() {
   }, [products]);
 
   const availableTechniciansCount = useMemo(() => {
-    // Certified technicians roster minus currently scheduled jobs
+    if (services.length === 0) return 0;
     const scheduledTechs = new Set(
-      services.filter((s) => s.status === 'scheduled' || s.status === 'in_progress').map((s) => s.technicianAssigned)
+      services
+        .filter((s) => s.status === 'scheduled' || s.status === 'in_progress')
+        .map((s) => s.technicianAssigned)
     );
-    const totalRoster = 5; // Certified team size
-    return Math.max(1, totalRoster - scheduledTechs.size);
+    const totalRoster = 5;
+    return Math.max(0, totalRoster - scheduledTechs.size);
   }, [services]);
 
   const periodOrdersCount = useMemo(() => {
@@ -404,11 +196,13 @@ export function App() {
   }, [filteredOrdersByTime]);
 
   const totalDealersCount = useMemo(() => dealers.length, [dealers]);
-  const pendingDealersCount = useMemo(() => dealers.filter((d) => d.status === 'pending').length, [dealers]);
-
+  const pendingDealersCount = useMemo(
+    () => dealers.filter((d) => d.status === 'pending').length,
+    [dealers]
+  );
   const totalProductsCount = useMemo(() => products.length, [products]);
 
-  // 3. Category Breakdown (Dynamic for Donut Chart & Legend)
+  // Category Breakdown dynamically computed from live products
   const categoryStats = useMemo(() => {
     const counts: Record<ProductCategory, number> = {
       purifiers: 0,
@@ -434,23 +228,59 @@ export function App() {
     ];
   }, [products]);
 
-  // 4. Dynamic Chart Coordinate Generator for SVG Trend Graph
+  // Dynamic Chart Coordinate Generator from actual database orders
   const chartTelemetry = useMemo(() => {
-    // Generate dates across the period based on orders
-    const dataPoints = [
-      { label: 'Sep 24', revenue: 0, orders: 0, fulfilled: 0 },
-      { label: 'Oct 02', revenue: 0, orders: 0, fulfilled: 0 },
-      { label: 'Oct 09', revenue: 0, orders: 0, fulfilled: 0 },
-      { label: 'Oct 14', revenue: 18288, orders: 1, fulfilled: 1 },
-      { label: 'Oct 17', revenue: 0, orders: 0, fulfilled: 0 },
-      { label: 'Oct 18', revenue: 17106, orders: 1, fulfilled: 1 },
-      { label: 'Oct 22', revenue: 2652, orders: 1, fulfilled: 0 },
-      { label: 'Oct 23', revenue: 11208, orders: 1, fulfilled: 0 },
-      { label: 'Oct 24', revenue: 25252, orders: 1, fulfilled: 0 },
-    ];
+    const numBuckets = 7;
+    const now = new Date().getTime();
+    let daysSpan = 30;
+    if (timeRange === 'today') daysSpan = 1;
+    else if (timeRange === '7days') daysSpan = 7;
+    else if (timeRange === '30days') daysSpan = 30;
+    else if (timeRange === '90days') daysSpan = 90;
+
+    const bucketDuration = (daysSpan * 24 * 60 * 60 * 1000) / (numBuckets - 1);
+    const startTime = now - daysSpan * 24 * 60 * 60 * 1000;
+
+    const dataPoints = Array.from({ length: numBuckets }, (_, i) => {
+      const bucketTime = startTime + i * bucketDuration;
+      const d = new Date(bucketTime);
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        label,
+        timestamp: bucketTime,
+        revenue: 0,
+        orders: 0,
+        fulfilled: 0,
+      };
+    });
+
+    filteredOrdersByTime.forEach((ord) => {
+      const ordTime = new Date(ord.createdAt).getTime();
+      let nearestIndex = 0;
+      let minDiff = Infinity;
+      dataPoints.forEach((pt, idx) => {
+        const diff = Math.abs(pt.timestamp - ordTime);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nearestIndex = idx;
+        }
+      });
+
+      if (nearestIndex >= 0 && nearestIndex < dataPoints.length) {
+        dataPoints[nearestIndex].orders += 1;
+        if (ord.paymentStatus === 'paid') {
+          dataPoints[nearestIndex].revenue += ord.totalAmount;
+        }
+        if (ord.status === 'delivered') {
+          dataPoints[nearestIndex].fulfilled += 1;
+        }
+      }
+    });
 
     const maxVal = Math.max(
-      ...dataPoints.map((d) => (metricFilter === 'revenue' ? d.revenue : d.orders)),
+      ...dataPoints.map((d) =>
+        metricFilter === 'revenue' ? d.revenue : metricFilter === 'orders' ? d.orders : d.fulfilled
+      ),
       1
     );
 
@@ -460,14 +290,14 @@ export function App() {
 
     const points = dataPoints.map((pt, index) => {
       const x = padding + (index / (dataPoints.length - 1)) * (width - padding * 2);
-      const val = metricFilter === 'revenue' ? pt.revenue : metricFilter === 'orders' ? pt.orders : pt.fulfilled;
+      const val =
+        metricFilter === 'revenue' ? pt.revenue : metricFilter === 'orders' ? pt.orders : pt.fulfilled;
       const y = height - padding - (val / (maxVal * 1.15)) * (height - padding * 2);
       return { x, y, val, label: pt.label };
     });
 
     const pathD = points.reduce((acc, pt, i) => {
       if (i === 0) return `M ${pt.x} ${pt.y}`;
-      // Cubic Bézier curve calculation for smooth trend line
       const prev = points[i - 1];
       const cx1 = prev.x + (pt.x - prev.x) / 2;
       const cy1 = prev.y;
@@ -478,36 +308,77 @@ export function App() {
 
     const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
-    return { points, pathD, areaD, maxVal, width, height };
-  }, [metricFilter]);
+    return { points, pathD, areaD, maxVal, width, height, dataPoints };
+  }, [filteredOrdersByTime, metricFilter, timeRange]);
 
-  // =========================================================================
-  // ACTIONS & HANDLERS
-  // =========================================================================
+  // Seed Initial Catalog to Firestore Backend
+  const handleSeedCatalogToFirestore = async () => {
+    if (!adminDb) {
+      alert('Firestore is not configured.');
+      return;
+    }
+    const db = adminDb;
+    setIsSeeding(true);
+    try {
+      const batch = writeBatch(db);
+      INITIAL_PRODUCTS.forEach((p) => {
+        const ref = doc(db, 'products', p.id);
+        batch.set(ref, p);
+      });
+      await batch.commit();
+      showToast('Successfully seeded 52 certified catalog products to Firestore backend!');
+    } catch (err) {
+      console.error('Failed to seed catalog:', err);
+      alert('Failed to seed catalog: ' + String(err));
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus, updatedAt: new Date().toISOString() } : ord))
-    );
+  // Order status update in Firestore backend
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    if (adminDb) {
+      try {
+        await updateDoc(doc(adminDb, 'orders', orderId), {
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('Failed to update order status in backend:', e);
+      }
+    } else {
+      setOrders((prev) =>
+        prev.map((ord) =>
+          ord.id === orderId ? { ...ord, status: newStatus, updatedAt: new Date().toISOString() } : ord
+        )
+      );
+    }
     showToast(`Order #${orderId} updated to "${newStatus}".`);
   };
 
-  const handleDealerApproval = (dealerId: string, approved: boolean) => {
-    setDealers((prev) =>
-      prev.map((d) =>
-        d.id === dealerId
-          ? {
-              ...d,
-              status: approved ? 'approved' : 'rejected',
-              reviewedAt: new Date().toISOString(),
-            }
-          : d
-      )
-    );
+  // Dealer approval in Firestore backend
+  const handleDealerApproval = async (dealerId: string, approved: boolean) => {
+    const status = approved ? 'approved' : 'rejected';
+    const reviewedAt = new Date().toISOString();
+    if (adminDb) {
+      try {
+        await updateDoc(doc(adminDb, 'dealers', dealerId), {
+          status,
+          reviewedAt,
+        });
+      } catch (e) {
+        console.error('Failed to update dealer status in backend:', e);
+      }
+    } else {
+      setDealers((prev) =>
+        prev.map((d) => (d.id === dealerId ? { ...d, status, reviewedAt } : d))
+      );
+    }
     showToast(`Dealer application marked as ${approved ? 'APPROVED' : 'REJECTED'}.`);
   };
 
-  const handleSaveNewProduct = (e: React.FormEvent) => {
+  // Save new or edited product in Firestore backend
+  const handleSaveNewProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim() || !formPrice) {
       alert('Please enter product name and price.');
@@ -519,11 +390,14 @@ export function App() {
     const stockNum = parseInt(formStock, 10) || 10;
     const minQtyNum = parseInt(formMinQty, 10) || 5;
 
-    const newProd: Product = {
-      id: `prod-${Date.now()}`,
+    const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const productPayload: Product = {
+      id: prodId,
       name: formName.trim(),
       category: formCategory,
-      description: formDesc.trim() || `Certified ${formCategory} unit engineered for domestic & commercial water purification.`,
+      description:
+        formDesc.trim() ||
+        `Certified ${formCategory} unit engineered for domestic & commercial water purification.`,
       price: priceNum,
       wholesalePrice: dealerPriceNum,
       minWholesaleQty: minQtyNum,
@@ -532,25 +406,55 @@ export function App() {
       imageUrl:
         formImage.trim() ||
         'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
-      specifications: {
+      specifications: editingProduct?.specifications || {
         Warranty: '1 Year Comprehensive',
         Standard: 'IS 14543 / ISO 9001:2015',
       },
-      rating: 4.8,
-      reviewsCount: 1,
-      createdAt: new Date().toISOString(),
+      rating: editingProduct?.rating || 4.8,
+      reviewsCount: editingProduct?.reviewsCount || 1,
+      createdAt: editingProduct?.createdAt || new Date().toISOString(),
     };
 
-    setProducts((prev) => [newProd, ...prev]);
+    if (adminDb) {
+      try {
+        await setDoc(doc(adminDb, 'products', prodId), productPayload, { merge: true });
+        showToast(
+          editingProduct
+            ? 'Product updated in backend database.'
+            : 'New product created in backend database.'
+        );
+      } catch (err) {
+        console.error('Failed to save product to backend:', err);
+        showToast('Error saving product to backend.');
+      }
+    } else {
+      if (editingProduct) {
+        setProducts((prev) => prev.map((p) => (p.id === prodId ? productPayload : p)));
+      } else {
+        setProducts((prev) => [productPayload, ...prev]);
+      }
+      showToast(editingProduct ? 'Product updated.' : 'New product created.');
+    }
+
     setIsAddProductOpen(false);
+    setEditingProduct(null);
     resetForm();
-    showToast(`Product "${newProd.name}" added to live catalog.`);
   };
 
-  const handleDeleteProduct = () => {
+  // Delete product from Firestore backend
+  const handleDeleteProduct = async () => {
     if (!deletingProduct) return;
-    setProducts((prev) => prev.filter((p) => p.id !== deletingProduct.id));
-    showToast(`Product "${deletingProduct.name}" removed from catalog.`);
+    if (adminDb) {
+      try {
+        await deleteDoc(doc(adminDb, 'products', deletingProduct.id));
+        showToast(`Product "${deletingProduct.name}" removed from backend database.`);
+      } catch (err) {
+        console.error('Failed to delete product from backend:', err);
+      }
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== deletingProduct.id));
+      showToast(`Product "${deletingProduct.name}" removed from catalog.`);
+    }
     setDeletingProduct(null);
   };
 
@@ -748,6 +652,22 @@ export function App() {
           </div>
 
           <div className="top-navbar-right">
+            {products.length === 0 && (
+              <button
+                className="btn-store-pill"
+                style={{
+                  backgroundColor: 'var(--primary)',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+                disabled={isSeeding}
+                onClick={handleSeedCatalogToFirestore}>
+                <span>📦</span>
+                <span>{isSeeding ? 'Seeding Backend...' : 'Seed Catalog to Backend'}</span>
+              </button>
+            )}
             <button
               className="btn-store-pill"
               onClick={() => showToast('Califnco pure water storefront is operational.')}>
@@ -1226,64 +1146,79 @@ export function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrdersList.map((ord) => (
-                      <tr key={ord.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{ord.id}</td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{ord.shippingAddress.fullName}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ord.userEmail}</div>
-                        </td>
-                        <td>
-                          {ord.items.map((it) => (
-                            <div key={it.productId} style={{ fontSize: '0.75rem' }}>
-                              {it.quantity}x {it.productName.substring(0, 32)}...
-                            </div>
-                          ))}
-                        </td>
-                        <td style={{ fontWeight: 700 }}>₹{ord.totalAmount.toLocaleString('en-IN')}</td>
-                        <td>
-                          <span
-                            className={`status-pill ${
-                              ord.paymentStatus === 'paid' ? 'success' : ord.paymentStatus === 'pending' ? 'warning' : 'danger'
-                            }`}>
-                            {ord.paymentStatus} ({ord.paymentMethod})
-                          </span>
-                        </td>
-                        <td>
-                          <select
-                            style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '0.775rem',
-                              fontWeight: 700,
-                              borderColor: 'var(--border-color)',
-                            }}
-                            value={ord.status}
-                            onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value as OrderStatus)}>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              background: '#fff',
-                              cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                            }}
-                            onClick={() => setInspectingOrder(ord)}>
-                            Receipt
-                          </button>
+                    {filteredOrdersList.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          style={{
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.9rem',
+                          }}>
+                          No customer orders recorded in backend database.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredOrdersList.map((ord) => (
+                        <tr key={ord.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{ord.id}</td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{ord.shippingAddress.fullName}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ord.userEmail}</div>
+                          </td>
+                          <td>
+                            {ord.items.map((it) => (
+                              <div key={it.productId} style={{ fontSize: '0.75rem' }}>
+                                {it.quantity}x {it.productName.substring(0, 32)}...
+                              </div>
+                            ))}
+                          </td>
+                          <td style={{ fontWeight: 700 }}>₹{ord.totalAmount.toLocaleString('en-IN')}</td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                ord.paymentStatus === 'paid' ? 'success' : ord.paymentStatus === 'pending' ? 'warning' : 'danger'
+                              }`}>
+                              {ord.paymentStatus} ({ord.paymentMethod})
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.775rem',
+                                fontWeight: 700,
+                                borderColor: 'var(--border-color)',
+                              }}
+                              value={ord.status}
+                              onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value as OrderStatus)}>
+                              <option value="pending">Pending</option>
+                              <option value="processing">Processing</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </td>
+                          <td>
+                            <button
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                background: '#fff',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                              }}
+                              onClick={() => setInspectingOrder(ord)}>
+                              Receipt
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1348,70 +1283,102 @@ export function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProductsList.map((prod) => (
-                      <tr key={prod.id}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <img
-                              src={prod.imageUrl}
-                              alt={prod.name}
-                              style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=400&q=80';
-                              }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700 }}>{prod.name}</div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {prod.id}</div>
-                            </div>
+                    {filteredProductsList.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          style={{
+                            textAlign: 'center',
+                            padding: '48px 20px',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.9rem',
+                          }}>
+                          <div style={{ marginBottom: '14px', fontWeight: 600 }}>
+                            No products found in backend database.
                           </div>
-                        </td>
-                        <td>
-                          <span className="status-pill slate">{prod.category}</span>
-                        </td>
-                        <td style={{ fontWeight: 700 }}>₹{prod.price.toLocaleString('en-IN')}</td>
-                        <td style={{ color: 'var(--primary)', fontWeight: 700 }}>
-                          ₹{prod.wholesalePrice.toLocaleString('en-IN')}{' '}
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>(MOQ {prod.minWholesaleQty})</span>
-                        </td>
-                        <td>
-                          <span
-                            className={`status-pill ${
-                              prod.stock > 15 ? 'success' : prod.stock > 0 ? 'warning' : 'danger'
-                            }`}>
-                            {prod.stock} units
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--border-color)',
-                                background: '#fff',
-                                cursor: 'pointer',
-                              }}
-                              onClick={() => setEditingProduct(prod)}>
-                              Edit
-                            </button>
-                            <button
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                border: '1px solid #fee2e2',
-                                background: '#fff',
-                                color: 'var(--danger)',
-                                cursor: 'pointer',
-                              }}
-                              onClick={() => setDeletingProduct(prod)}>
-                              Delete
-                            </button>
-                          </div>
+                          <button
+                            className="btn-action-primary"
+                            style={{
+                              margin: '0 auto',
+                              display: 'inline-flex',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                            }}
+                            disabled={isSeeding}
+                            onClick={handleSeedCatalogToFirestore}>
+                            <span>📦</span>
+                            <span>
+                              {isSeeding ? 'Writing to Firestore...' : 'Seed 52 Catalog SKUs to Backend'}
+                            </span>
+                          </button>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredProductsList.map((prod) => (
+                        <tr key={prod.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <img
+                                src={prod.imageUrl}
+                                alt={prod.name}
+                                style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=400&q=80';
+                                }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 700 }}>{prod.name}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {prod.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="status-pill slate">{prod.category}</span>
+                          </td>
+                          <td style={{ fontWeight: 700 }}>₹{prod.price.toLocaleString('en-IN')}</td>
+                          <td style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                            ₹{prod.wholesalePrice.toLocaleString('en-IN')}{' '}
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>(MOQ {prod.minWholesaleQty})</span>
+                          </td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                prod.stock > 15 ? 'success' : prod.stock > 0 ? 'warning' : 'danger'
+                              }`}>
+                              {prod.stock} units
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid var(--border-color)',
+                                  background: '#fff',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => setEditingProduct(prod)}>
+                                Edit
+                              </button>
+                              <button
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #fee2e2',
+                                  background: '#fff',
+                                  color: 'var(--danger)',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => setDeletingProduct(prod)}>
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1445,61 +1412,76 @@ export function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {dealers.map((d) => (
-                      <tr key={d.id}>
-                        <td style={{ fontWeight: 700 }}>{d.businessName}</td>
-                        <td>
-                          <div>{d.contactPerson}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{d.email}</div>
-                        </td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{d.gstNumber}</td>
-                        <td>
-                          {d.address.city}, {d.address.state}
-                        </td>
-                        <td>
-                          <span
-                            className={`status-pill ${
-                              d.status === 'approved' ? 'success' : d.status === 'pending' ? 'warning' : 'danger'
-                            }`}>
-                            {d.status}
-                          </span>
-                        </td>
-                        <td>
-                          {d.status === 'pending' ? (
-                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                              <button
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  background: 'var(--success)',
-                                  color: '#fff',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                }}
-                                onClick={() => handleDealerApproval(d.id, true)}>
-                                Approve
-                              </button>
-                              <button
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  background: 'var(--danger)',
-                                  color: '#fff',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                }}
-                                onClick={() => handleDealerApproval(d.id, false)}>
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Reviewed</span>
-                          )}
+                    {dealers.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          style={{
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.9rem',
+                          }}>
+                          No dealer applications found in backend database.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      dealers.map((d) => (
+                        <tr key={d.id}>
+                          <td style={{ fontWeight: 700 }}>{d.businessName}</td>
+                          <td>
+                            <div>{d.contactPerson}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{d.email}</div>
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{d.gstNumber}</td>
+                          <td>
+                            {d.address.city}, {d.address.state}
+                          </td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                d.status === 'approved' ? 'success' : d.status === 'pending' ? 'warning' : 'danger'
+                              }`}>
+                              {d.status}
+                            </span>
+                          </td>
+                          <td>
+                            {d.status === 'pending' ? (
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    background: 'var(--success)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                  }}
+                                  onClick={() => handleDealerApproval(d.id, true)}>
+                                  Approve
+                                </button>
+                                <button
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    background: 'var(--danger)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                  }}
+                                  onClick={() => handleDealerApproval(d.id, false)}>
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Reviewed</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1533,31 +1515,46 @@ export function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {services.map((srv) => (
-                      <tr key={srv.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{srv.id}</td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{srv.customerName}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{srv.customerPhone}</div>
-                        </td>
-                        <td>
-                          <span className="status-pill purple">{srv.serviceType.replace('_', ' ')}</span>
-                        </td>
-                        <td>
-                          <div>{srv.preferredDate}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{srv.preferredTimeSlot}</div>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{srv.technicianAssigned || 'Unassigned'}</td>
-                        <td>
-                          <span
-                            className={`status-pill ${
-                              srv.status === 'scheduled' ? 'info' : srv.status === 'completed' ? 'success' : 'warning'
-                            }`}>
-                            {srv.status}
-                          </span>
+                    {services.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          style={{
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.9rem',
+                          }}>
+                          No field service or maintenance bookings in backend database.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      services.map((srv) => (
+                        <tr key={srv.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{srv.id}</td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{srv.customerName}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{srv.customerPhone}</div>
+                          </td>
+                          <td>
+                            <span className="status-pill purple">{srv.serviceType.replace('_', ' ')}</span>
+                          </td>
+                          <td>
+                            <div>{srv.preferredDate}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{srv.preferredTimeSlot}</div>
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{srv.technicianAssigned || 'Unassigned'}</td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                srv.status === 'scheduled' ? 'info' : srv.status === 'completed' ? 'success' : 'warning'
+                              }`}>
+                              {srv.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1574,6 +1571,16 @@ export function App() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {lowStockCount === 0 && pendingOrdersCount === 0 && pendingDealersCount === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✨</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem', marginBottom: '4px' }}>
+                      All systems clear
+                    </div>
+                    <div style={{ fontSize: '0.85rem' }}>No pending alerts or priority operations require attention.</div>
+                  </div>
+                )}
+
                 {lowStockCount > 0 && (
                   <div
                     style={{

@@ -20,7 +20,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
-import { UserProfile, Order } from '@shared';
+import { UserProfile, Order, Product } from '@shared';
 
 /**
  * Califnco Firebase Client Configuration
@@ -250,3 +250,25 @@ export const fetchUserOrdersFromFirestore = async (userId: string): Promise<Orde
     return [];
   }
 };
+
+/**
+ * Fetch products from Firestore backend
+ */
+export const fetchProductsFromFirestore = async (): Promise<Product[]> => {
+  if (!db) {
+    return [];
+  }
+  try {
+    const productsRef = collection(db, 'products');
+    const snapshot = await getDocs(productsRef);
+    const products: Product[] = [];
+    snapshot.forEach((docSnap) => {
+      products.push(docSnap.data() as Product);
+    });
+    return products;
+  } catch (err) {
+    console.warn('[Califnco Firebase] Error fetching products from Firestore:', err);
+    return [];
+  }
+};
+
