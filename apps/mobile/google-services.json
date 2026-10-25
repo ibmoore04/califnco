@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "952118787903",
+    "project_id": "califnco-assignment-d989e",
+    "storage_bucket": "califnco-assignment-d989e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:952118787903:android:bfba740f2ac042ed7e9d8a",
+        "android_client_info": {
+          "package_name": "com.califnco.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFLbddOmzweqt0lsBhVcTW1G2b_fdj6NU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
