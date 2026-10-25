@@ -39,6 +39,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "c799dfd3-d4c8-4adc-a4c8-bd05c7a23268"
+      }
+    },
+    "owner": "alpha_wolf27"
   }
 }
