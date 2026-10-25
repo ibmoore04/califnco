@@ -9,6 +9,7 @@
   "scripts": {
     "start:mobile": "npm run --prefix apps/mobile start",
     "start:admin": "npm run --prefix apps/admin dev",
+    "build": "npm run --prefix apps/admin build",
     "build:admin": "npm run --prefix apps/admin build"
   },
   "devDependencies": {

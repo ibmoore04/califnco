@@ -8,12 +8,12 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
  * Strictly client-side SDK. Never embed server-side private keys.
  */
 export const adminFirebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDFLbddOmzweqt0lsBhVcTW1G2b_fdj6NU',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'califnco-assignment-d989e.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'califnco-assignment-d989e',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'califnco-assignment-d989e.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '952118787903',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:952118787903:web:bfba740f2ac042ed7e9d8a',
 };
 
 export const isAdminFirebaseConfigured: boolean = Boolean(
