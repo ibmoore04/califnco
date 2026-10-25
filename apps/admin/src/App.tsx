@@ -7,6 +7,7 @@ import {
   type OrderStatus,
   type DealerProfile,
   type ServiceBooking,
+  type ServiceStatus,
 } from '@shared';
 import {
   collection,
@@ -539,6 +540,55 @@ export function App() {
       );
     }
     showToast(`Dealer application marked as ${approved ? 'APPROVED' : 'REJECTED'}.`);
+  };
+
+  // Service booking status update in Firestore backend
+  const handleUpdateServiceStatus = async (serviceId: string, newStatus: ServiceStatus) => {
+    const updatedAt = new Date().toISOString();
+    if (adminDb) {
+      try {
+        await updateDoc(doc(adminDb, 'services', serviceId), {
+          status: newStatus,
+          updatedAt,
+        });
+      } catch (e) {
+        console.error('Failed to update service status in backend:', e);
+      }
+    } else {
+      setServices((prev) =>
+        prev.map((s) => (s.id === serviceId ? { ...s, status: newStatus, updatedAt } : s))
+      );
+    }
+    showToast(`Service booking #${serviceId} status updated to "${newStatus}".`);
+  };
+
+  // Technician assignment in Firestore backend
+  const handleAssignTechnician = async (serviceId: string, technicianName: string) => {
+    const updatedAt = new Date().toISOString();
+    if (adminDb) {
+      try {
+        await updateDoc(doc(adminDb, 'services', serviceId), {
+          technicianAssigned: technicianName,
+          status: technicianName ? 'scheduled' : 'submitted',
+          updatedAt,
+        });
+      } catch (e) {
+        console.error('Failed to assign technician in backend:', e);
+      }
+    } else {
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === serviceId
+            ? { ...s, technicianAssigned: technicianName, status: technicianName ? 'scheduled' : 'submitted', updatedAt }
+            : s
+        )
+      );
+    }
+    showToast(
+      technicianName
+        ? `Assigned technician "${technicianName}" to service #${serviceId}.`
+        : `Unassigned technician from service #${serviceId}.`
+    );
   };
 
   // Save new or edited product in Firestore backend
@@ -1825,14 +1875,36 @@ export function App() {
                             <div>{srv.preferredDate}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{srv.preferredTimeSlot}</div>
                           </td>
-                          <td style={{ fontWeight: 600 }}>{srv.technicianAssigned || 'Unassigned'}</td>
-                          <td>
-                            <span
-                              className={`status-pill ${
-                                srv.status === 'scheduled' ? 'info' : srv.status === 'completed' ? 'success' : 'warning'
-                              }`}>
-                              {srv.status}
-                            </span>
+                          <td style={{ minWidth: '190px' }}>
+                            <CustomDropdown
+                              size="sm"
+                              value={srv.technicianAssigned || 'unassigned'}
+                              options={[
+                                { value: 'unassigned', label: 'Unassigned', icon: '👤' },
+                                { value: 'Rajesh Kumar (RO Specialist)', label: 'Rajesh Kumar (RO)', icon: '🔧' },
+                                { value: 'Vikram Singh (Senior Tech)', label: 'Vikram Singh (Sr)', icon: '⚡' },
+                                { value: 'Anil Sharma (Installation Expert)', label: 'Anil Sharma (Inst)', icon: '🛠️' },
+                                { value: 'Deepak Patel (Field Engineer)', label: 'Deepak Patel (Field)', icon: '🧰' },
+                              ]}
+                              onChange={(val) => {
+                                const tech = val === 'unassigned' ? '' : val;
+                                handleAssignTechnician(srv.id, tech);
+                              }}
+                            />
+                          </td>
+                          <td style={{ minWidth: '160px' }}>
+                            <CustomDropdown
+                              size="sm"
+                              value={srv.status}
+                              options={[
+                                { value: 'submitted', label: 'Submitted', badge: 'Pending' },
+                                { value: 'scheduled', label: 'Scheduled', badge: 'Active' },
+                                { value: 'in_progress', label: 'In Progress', badge: 'Live' },
+                                { value: 'completed', label: 'Completed', badge: 'Done' },
+                                { value: 'cancelled', label: 'Cancelled', badge: 'Closed' },
+                              ]}
+                              onChange={(val) => handleUpdateServiceStatus(srv.id, val as ServiceStatus)}
+                            />
                           </td>
                         </tr>
                       ))

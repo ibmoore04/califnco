@@ -19,6 +19,7 @@ import {
   query,
   where,
   getDocs,
+  onSnapshot,
 } from 'firebase/firestore';
 import { UserProfile, Order, Product, DealerProfile, ServiceBooking } from '@shared';
 
@@ -390,4 +391,102 @@ export const fetchUserServiceBookingsFromFirestore = async (
     return [];
   }
 };
+
+/**
+ * Subscribe in real-time to authenticated user's orders from Firestore
+ */
+export const subscribeUserOrdersFromFirestore = (
+  userId: string,
+  onUpdate: (orders: Order[]) => void
+): (() => void) => {
+  if (!db) {
+    return () => {};
+  }
+  try {
+    const ordersRef = collection(db, 'orders');
+    const q = query(ordersRef, where('userId', '==', userId));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const orders: Order[] = [];
+        snapshot.forEach((docSnap) => {
+          orders.push(docSnap.data() as Order);
+        });
+        orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onUpdate(orders);
+      },
+      (err) => {
+        console.warn('[Califnco Firebase] Orders subscription warning:', err);
+      }
+    );
+  } catch (err) {
+    console.warn('[Califnco Firebase] Failed to attach orders subscription:', err);
+    return () => {};
+  }
+};
+
+/**
+ * Subscribe in real-time to dealer profile / application status for user
+ */
+export const subscribeDealerApplicationFromFirestore = (
+  userId: string,
+  onUpdate: (dealer: DealerProfile | null) => void
+): (() => void) => {
+  if (!db) {
+    return () => {};
+  }
+  try {
+    const dealerDocRef = doc(db, 'dealers', userId);
+    return onSnapshot(
+      dealerDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          onUpdate(snapshot.data() as DealerProfile);
+        } else {
+          onUpdate(null);
+        }
+      },
+      (err) => {
+        console.warn('[Califnco Firebase] Dealer status subscription warning:', err);
+      }
+    );
+  } catch (err) {
+    console.warn('[Califnco Firebase] Failed to attach dealer subscription:', err);
+    return () => {};
+  }
+};
+
+/**
+ * Subscribe in real-time to service bookings for authenticated user
+ */
+export const subscribeUserServiceBookingsFromFirestore = (
+  userId: string,
+  onUpdate: (bookings: ServiceBooking[]) => void
+): (() => void) => {
+  if (!db) {
+    return () => {};
+  }
+  try {
+    const servicesRef = collection(db, 'services');
+    const q = query(servicesRef, where('userId', '==', userId));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const bookings: ServiceBooking[] = [];
+        snapshot.forEach((docSnap) => {
+          bookings.push(docSnap.data() as ServiceBooking);
+        });
+        bookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onUpdate(bookings);
+      },
+      (err) => {
+        console.warn('[Califnco Firebase] Service bookings subscription warning:', err);
+      }
+    );
+  } catch (err) {
+    console.warn('[Califnco Firebase] Failed to attach service bookings subscription:', err);
+    return () => {};
+  }
+};
+
 

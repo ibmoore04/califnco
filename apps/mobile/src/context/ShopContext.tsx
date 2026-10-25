@@ -21,10 +21,13 @@ import {
   subscribeToAuthChanges,
   syncOrderToFirestore,
   fetchUserOrdersFromFirestore,
+  subscribeUserOrdersFromFirestore,
   submitDealerApplicationToFirestore,
   fetchDealerApplicationFromFirestore,
+  subscribeDealerApplicationFromFirestore,
   createServiceBookingInFirestore,
   fetchUserServiceBookingsFromFirestore,
+  subscribeUserServiceBookingsFromFirestore,
   formatFirebaseAuthError,
 } from '@/services/firebase';
 import { ProductService, ProductServiceResult } from '@/services/productService';
@@ -430,10 +433,19 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Listen to Firebase Auth state
+    // Listen to Firebase Auth state and establish real-time Firestore listeners
     let authUnsubscribe: (() => void) | null = null;
+    let unsubOrders: (() => void) | null = null;
+    let unsubDealer: (() => void) | null = null;
+    let unsubServices: (() => void) | null = null;
+
     if (isFirebaseConfigured) {
-      authUnsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
+      authUnsubscribe = subscribeToAuthChanges((firebaseUser) => {
+        // Clean up previous user subscriptions
+        if (unsubOrders) { unsubOrders(); unsubOrders = null; }
+        if (unsubDealer) { unsubDealer(); unsubDealer = null; }
+        if (unsubServices) { unsubServices(); unsubServices = null; }
+
         if (firebaseUser) {
           setIsAuthenticated(true);
           setUserProfile((prev) => ({
@@ -444,21 +456,24 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: 'customer',
           }));
 
-          // Fetch orders for customer
-          const remoteOrders = await fetchUserOrdersFromFirestore(firebaseUser.uid);
-          setOrders(remoteOrders);
-          safeStorage.setItem('califnco_orders', JSON.stringify(remoteOrders)).catch(() => {});
+          // 1. Subscribe to Orders in real-time
+          unsubOrders = subscribeUserOrdersFromFirestore(firebaseUser.uid, (remoteOrders) => {
+            setOrders(remoteOrders);
+            safeStorage.setItem('califnco_orders', JSON.stringify(remoteOrders)).catch(() => {});
+          });
 
-          // Fetch dealer application status
-          const dealer = await fetchDealerApplicationFromFirestore(firebaseUser.uid);
-          if (dealer) {
-            setDealerProfile(dealer);
-            setUserProfile((prev) => ({ ...prev, dealerStatus: dealer.status }));
-          }
+          // 2. Subscribe to Dealer status in real-time
+          unsubDealer = subscribeDealerApplicationFromFirestore(firebaseUser.uid, (dealer) => {
+            if (dealer) {
+              setDealerProfile(dealer);
+              setUserProfile((prev) => ({ ...prev, dealerStatus: dealer.status }));
+            }
+          });
 
-          // Fetch customer service bookings
-          const bookings = await fetchUserServiceBookingsFromFirestore(firebaseUser.uid);
-          setServiceBookings(bookings);
+          // 3. Subscribe to Service Bookings in real-time
+          unsubServices = subscribeUserServiceBookingsFromFirestore(firebaseUser.uid, (bookings) => {
+            setServiceBookings(bookings);
+          });
         }
       });
     }
@@ -466,6 +481,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubProducts();
       if (authUnsubscribe) authUnsubscribe();
+      if (unsubOrders) unsubOrders();
+      if (unsubDealer) unsubDealer();
+      if (unsubServices) unsubServices();
     };
   }, []);
 
