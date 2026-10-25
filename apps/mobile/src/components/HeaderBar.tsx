@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Image } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
@@ -21,16 +21,23 @@ export const HeaderBar: React.FC = () => {
         activeOpacity={0.7}
         onPress={() => setActiveTab('catalogue')}>
         <View style={[styles.logoIcon, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.logoDrop, { color: colors.primary }]}>💧</Text>
+          <Image
+            source={require('../../assets/images/icon.png')}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </View>
-        <View>
+        <View style={styles.brandTextContainer}>
           <View style={styles.titleRow}>
             <Text style={[styles.brandTitle, { color: colors.text }]}>Califnco</Text>
             <View style={[styles.pureBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.pureBadgeText}>PURE</Text>
             </View>
           </View>
-          <Text style={[styles.brandSubtitle, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.brandSubtitle, { color: colors.textSecondary }]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
             Clean Water, Pure Life • Est. 2026
           </Text>
         </View>
@@ -89,23 +96,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+    width: '100%',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   logoIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoDrop: {
-    fontSize: 20,
+  logoImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+  },
+  brandTextContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   titleRow: {
     flexDirection: 'row',
@@ -138,7 +156,8 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    flexShrink: 0,
   },
   authBtn: {
     width: 38,

@@ -95,7 +95,9 @@ button, input, select, textarea {
 .admin-shell {
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background-color: var(--bg-page);
 }
 
@@ -384,11 +386,14 @@ button, input, select, textarea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   min-width: 0;
+  position: relative;
 }
 
-/* Top Navigation Bar */
+/* Top Navigation Bar - Permanently Fixed and Independent */
 .top-navbar {
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
@@ -396,9 +401,8 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  flex-shrink: 0;
+  z-index: 40;
   box-shadow: var(--shadow-xs);
 }
 
@@ -498,6 +502,9 @@ button, input, select, textarea {
 
 /* Page Body Container */
 .content-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.5rem 1.75rem 2.5rem 1.75rem;
   display: flex;
   flex-direction: column;

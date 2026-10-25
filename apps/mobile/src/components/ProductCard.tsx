@@ -15,6 +15,14 @@ interface ProductCardProps {
   product: Product;
 }
 
+const LOCAL_CATEGORY_IMAGES: Record<string, any> = {
+  purifiers: require('../../assets/products/purifiers.jpg'),
+  dispensers: require('../../assets/products/dispensers.jpg'),
+  pumps: require('../../assets/products/pumps.jpg'),
+  filters: require('../../assets/products/filters.jpg'),
+  spares: require('../../assets/products/spares.jpg'),
+};
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
@@ -65,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       onPress={() => setSelectedProduct(product)}>
       {/* Product Image with Fallback */}
       <View style={[styles.imageContainer, { backgroundColor: colors.backgroundElement }]}>
-        {!imageError && product.imageUrl ? (
+        {!imageError && product.imageUrl && product.imageUrl.startsWith('http') ? (
           <Image
             source={{ uri: product.imageUrl }}
             style={styles.image}
@@ -73,12 +81,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             onError={() => setImageError(true)}
           />
         ) : (
-          <View style={styles.fallbackBox}>
-            <Text style={styles.fallbackEmoji}>{getCategoryEmoji(product.category)}</Text>
-            <Text style={[styles.fallbackCategory, { color: colors.textSecondary }]}>
-              {product.category.toUpperCase()}
-            </Text>
-          </View>
+          <Image
+            source={LOCAL_CATEGORY_IMAGES[product.category] || LOCAL_CATEGORY_IMAGES.purifiers}
+            style={styles.image}
+            resizeMode="cover"
+          />
         )}
 
         {/* Stock Badge Overlay */}

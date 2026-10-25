@@ -13,6 +13,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography } from '@/constants/theme';
 import { useShop } from '@/context/ShopContext';
 
+const LOCAL_CATEGORY_IMAGES: Record<string, any> = {
+  purifiers: require('../../assets/products/purifiers.jpg'),
+  dispensers: require('../../assets/products/dispensers.jpg'),
+  pumps: require('../../assets/products/pumps.jpg'),
+  filters: require('../../assets/products/filters.jpg'),
+  spares: require('../../assets/products/spares.jpg'),
+};
+
 export const ProductDetailModal: React.FC = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
@@ -78,7 +86,7 @@ export const ProductDetailModal: React.FC = () => {
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
             {/* Main Product Image */}
             <View style={[styles.imageWrapper, { backgroundColor: colors.backgroundElement }]}>
-              {!imageError && selectedProduct.imageUrl ? (
+              {!imageError && selectedProduct.imageUrl && selectedProduct.imageUrl.startsWith('http') ? (
                 <Image
                   source={{ uri: selectedProduct.imageUrl }}
                   style={styles.image}
@@ -86,12 +94,11 @@ export const ProductDetailModal: React.FC = () => {
                   onError={() => setImageError(true)}
                 />
               ) : (
-                <View style={styles.fallbackBox}>
-                  <Text style={styles.fallbackEmoji}>💧</Text>
-                  <Text style={[styles.fallbackTitle, { color: colors.textSecondary }]}>
-                    {selectedProduct.category.toUpperCase()} SPECIFICATION
-                  </Text>
-                </View>
+                <Image
+                  source={LOCAL_CATEGORY_IMAGES[selectedProduct.category] || LOCAL_CATEGORY_IMAGES.purifiers}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
               )}
             </View>
 

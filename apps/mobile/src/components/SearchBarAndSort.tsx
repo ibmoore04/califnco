@@ -69,11 +69,17 @@ export const SearchBarAndSort: React.FC = () => {
 
       {/* Results Count & Active Sort Label */}
       <View style={styles.metaRow}>
-        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+        <Text style={[styles.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
           Showing <Text style={[styles.metaHighlight, { color: colors.primary }]}>{filteredProducts.length}</Text> items
         </Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Text style={[styles.activeSortText, { color: colors.primary }]}>
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={styles.sortTriggerPill}
+          activeOpacity={0.7}>
+          <Text
+            style={[styles.activeSortText, { color: colors.primary }]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
             Sorted by: {currentSortLabel} ▼
           </Text>
         </TouchableOpacity>
@@ -202,14 +208,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     paddingHorizontal: 2,
+    gap: 8,
   },
   metaText: {
     fontFamily: Typography.regular,
     fontSize: 12,
+    flexShrink: 0,
   },
   metaHighlight: {
     fontFamily: Typography.bold,
     fontWeight: '700',
+  },
+  sortTriggerPill: {
+    flexShrink: 1,
+    maxWidth: '65%',
   },
   activeSortText: {
     fontFamily: Typography.semiBold,

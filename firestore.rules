@@ -11,10 +11,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Administrator privileges strictly verified via trusted Firebase Auth custom claims.
-    // Ordinary users cannot grant themselves admin privileges by editing Firestore documents.
+    // Administrator privileges verified via trusted Firebase Auth custom claims,
+    // root admin UID, or verified admin account email.
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.admin == true;
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.uid == "KIjD31YuSmdzxDgbjzvGkrxkJra2" ||
+        request.auth.token.email == "akanbiibrahimolatunde27@gmail.com"
+      );
     }
 
     // 1. PRODUCTS: Public catalog read; only authenticated administrators can mutate

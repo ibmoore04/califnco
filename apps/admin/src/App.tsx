@@ -24,6 +24,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { adminDb, adminAuth } from './lib/firebase';
+import { CustomDropdown } from './components/CustomDropdown';
 
 type NavSection = 'dashboard' | 'orders' | 'catalog' | 'dealers' | 'services' | 'notifications' | 'marketing';
 type TimeRange = 'today' | '7days' | '30days' | '90days' | 'custom';
@@ -111,17 +112,38 @@ export function App() {
       }
     );
 
-    // Orders, Dealers, and Services require authenticated administrator
+    // Orders, Dealers, and Services require authenticated administrator with verified claim
     let unsubOrders = () => {};
     let unsubDealers = () => {};
     let unsubServices = () => {};
 
-    if (adminUser) {
+    if (adminUser && isAdminClaimVerified) {
       unsubOrders = onSnapshot(
         collection(adminDb, 'orders'),
         (snapshot) => {
           const list: Order[] = [];
-          snapshot.forEach((d) => list.push(d.data() as Order));
+          snapshot.forEach((d) => {
+            const data = d.data() as Order;
+            list.push({
+              ...data,
+              id: data.id || d.id,
+              shippingAddress: data.shippingAddress || {
+                fullName: 'Customer',
+                phone: '',
+                street: '',
+                city: '',
+                state: '',
+                postalCode: '',
+              },
+              items: data.items || [],
+              totalAmount: typeof data.totalAmount === 'number' ? data.totalAmount : 0,
+              userEmail: data.userEmail || '',
+              status: data.status || 'pending',
+              paymentStatus: data.paymentStatus || 'pending',
+              paymentMethod: data.paymentMethod || 'demo_simulated',
+              createdAt: data.createdAt || new Date().toISOString(),
+            });
+          });
           list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setOrders(list);
         },
@@ -134,7 +156,24 @@ export function App() {
         collection(adminDb, 'dealers'),
         (snapshot) => {
           const list: DealerProfile[] = [];
-          snapshot.forEach((d) => list.push(d.data() as DealerProfile));
+          snapshot.forEach((d) => {
+            const data = d.data() as DealerProfile;
+            list.push({
+              ...data,
+              id: data.id || d.id,
+              businessName: data.businessName || (data as any).companyName || 'Business',
+              companyName: (data as any).companyName || data.businessName || 'Business',
+              address: data.address || {
+                fullName: '',
+                phone: '',
+                street: '',
+                city: '',
+                state: '',
+                postalCode: '',
+              },
+              appliedAt: data.appliedAt || new Date().toISOString(),
+            });
+          });
           setDealers(list);
         },
         (err) => {
@@ -146,7 +185,22 @@ export function App() {
         collection(adminDb, 'services'),
         (snapshot) => {
           const list: ServiceBooking[] = [];
-          snapshot.forEach((d) => list.push(d.data() as ServiceBooking));
+          snapshot.forEach((d) => {
+            const data = d.data() as ServiceBooking;
+            list.push({
+              ...data,
+              id: data.id || d.id,
+              address: data.address || {
+                fullName: '',
+                phone: '',
+                street: '',
+                city: '',
+                state: '',
+                postalCode: '',
+              },
+              createdAt: data.createdAt || new Date().toISOString(),
+            });
+          });
           setServices(list);
         },
         (err) => {
@@ -165,7 +219,7 @@ export function App() {
       unsubDealers();
       unsubServices();
     };
-  }, [adminUser]);
+  }, [adminUser, isAdminClaimVerified]);
 
   // Listen to Firebase Auth state & verify custom claims
   useEffect(() => {
@@ -594,9 +648,9 @@ export function App() {
       const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
       const matchesQ =
         !searchQuery ||
-        o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.shippingAddress.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
+        o.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o.shippingAddress?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesStatus && matchesQ;
     });
   }, [orders, statusFilter, searchQuery]);
@@ -1345,17 +1399,19 @@ export function App() {
                   />
                 </div>
 
-                <select
-                  className="select-filter"
+                <CustomDropdown
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'all')}>
-                  <option value="all">All Statuses ({orders.length})</option>
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+                  onChange={(val) => setStatusFilter(val as OrderStatus | 'all')}
+                  options={[
+                    { value: 'all', label: `All Statuses (${orders.length})` },
+                    { value: 'pending', label: 'Pending', icon: '⏳' },
+                    { value: 'processing', label: 'Processing', icon: '⚙️' },
+                    { value: 'shipped', label: 'Shipped', icon: '🚚' },
+                    { value: 'delivered', label: 'Delivered', icon: '✅' },
+                    { value: 'cancelled', label: 'Cancelled', icon: '❌' },
+                  ]}
+                  style={{ minWidth: '180px' }}
+                />
               </div>
 
               {/* Table */}
@@ -1391,17 +1447,17 @@ export function App() {
                         <tr key={ord.id}>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{ord.id}</td>
                           <td>
-                            <div style={{ fontWeight: 600 }}>{ord.shippingAddress.fullName}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ord.userEmail}</div>
+                            <div style={{ fontWeight: 600 }}>{ord.shippingAddress?.fullName || 'Customer'}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ord.userEmail || ord.shippingAddress?.phone || 'No email'}</div>
                           </td>
                           <td>
-                            {ord.items.map((it) => (
-                              <div key={it.productId} style={{ fontSize: '0.75rem' }}>
-                                {it.quantity}x {it.productName.substring(0, 32)}...
+                            {(ord.items || []).map((it, idx) => (
+                              <div key={it.productId || idx} style={{ fontSize: '0.75rem' }}>
+                                {it.quantity}x {(it.productName || 'Item').substring(0, 32)}...
                               </div>
                             ))}
                           </td>
-                          <td style={{ fontWeight: 700 }}>₹{ord.totalAmount.toLocaleString('en-IN')}</td>
+                          <td style={{ fontWeight: 700 }}>₹{(ord.totalAmount || 0).toLocaleString('en-IN')}</td>
                           <td>
                             <span
                               className={`status-pill ${
@@ -1411,22 +1467,19 @@ export function App() {
                             </span>
                           </td>
                           <td>
-                            <select
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                fontSize: '0.775rem',
-                                fontWeight: 700,
-                                borderColor: 'var(--border-color)',
-                              }}
+                            <CustomDropdown
+                              size="sm"
                               value={ord.status}
-                              onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value as OrderStatus)}>
-                              <option value="pending">Pending</option>
-                              <option value="processing">Processing</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
+                              onChange={(val) => handleUpdateOrderStatus(ord.id, val as OrderStatus)}
+                              options={[
+                                { value: 'pending', label: 'Pending', icon: '⏳' },
+                                { value: 'processing', label: 'Processing', icon: '⚙️' },
+                                { value: 'shipped', label: 'Shipped', icon: '🚚' },
+                                { value: 'delivered', label: 'Delivered', icon: '✅' },
+                                { value: 'cancelled', label: 'Cancelled', icon: '❌' },
+                              ]}
+                              style={{ minWidth: '130px' }}
+                            />
                           </td>
                           <td>
                             <button
@@ -1483,17 +1536,19 @@ export function App() {
                   />
                 </div>
 
-                <select
-                  className="select-filter"
+                <CustomDropdown
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value as ProductCategory | 'all')}>
-                  <option value="all">All Categories ({products.length})</option>
-                  <option value="purifiers">Purifiers</option>
-                  <option value="dispensers">Dispensers</option>
-                  <option value="pumps">Booster Pumps</option>
-                  <option value="filters">Filters &amp; Cartridges</option>
-                  <option value="spares">Spare Parts</option>
-                </select>
+                  onChange={(val) => setCategoryFilter(val as ProductCategory | 'all')}
+                  options={[
+                    { value: 'all', label: `All Categories (${products.length})` },
+                    { value: 'purifiers', label: 'Purifiers', icon: '💧' },
+                    { value: 'dispensers', label: 'Dispensers', icon: '🏢' },
+                    { value: 'pumps', label: 'Booster Pumps', icon: '⚡' },
+                    { value: 'filters', label: 'Filters & Cartridges', icon: '🔬' },
+                    { value: 'spares', label: 'Spare Parts', icon: '🔧' },
+                  ]}
+                  style={{ minWidth: '200px' }}
+                />
               </div>
 
               {/* Products Table */}
@@ -1551,7 +1606,7 @@ export function App() {
                                 style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src =
-                                    'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=400&q=80';
+                                    `/products/${prod.category || 'purifiers'}.jpg`;
                                 }}
                               />
                               <div>
@@ -1981,26 +2036,22 @@ ${postSpecs}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>Select Product:</span>
-                    <select
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
+                    <CustomDropdown
+                      value={marketingProductId || selectedProd?.id || ''}
+                      onChange={(val) => setMarketingProductId(val)}
+                      options={(products.length > 0 ? products : INITIAL_PRODUCTS).map((p) => ({
+                        value: p.id,
+                        label: `${p.name} (₹${p.price.toLocaleString('en-IN')})`,
+                      }))}
+                      style={{ minWidth: '220px', maxWidth: '300px' }}
+                      triggerStyle={{
                         backgroundColor: '#ffffff',
                         color: '#0f172a',
-                        cursor: 'pointer',
-                        maxWidth: '260px',
+                        fontWeight: 700,
+                        fontSize: '0.825rem',
                       }}
-                      value={marketingProductId || selectedProd?.id}
-                      onChange={(e) => setMarketingProductId(e.target.value)}>
-                      {(products.length > 0 ? products : INITIAL_PRODUCTS).map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} (₹{p.price.toLocaleString('en-IN')})
-                        </option>
-                      ))}
-                    </select>
+                      align="right"
+                    />
                   </div>
                 </div>
 
@@ -2051,10 +2102,9 @@ ${postSpecs}
                       <img
                         src={selectedProd?.imageUrl}
                         alt={selectedProd?.name}
-                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
                         onError={(e) => {
                           (e.target as any).src =
-                            'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=200';
+                            `/products/${selectedProd?.category || 'purifiers'}.jpg`;
                         }}
                       />
                       <div>
@@ -2322,16 +2372,17 @@ ${postSpecs}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: 700 }}>Category</label>
-                    <select
-                      style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                    <CustomDropdown
                       value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as ProductCategory)}>
-                      <option value="purifiers">Purifiers</option>
-                      <option value="dispensers">Dispensers</option>
-                      <option value="pumps">Booster Pumps</option>
-                      <option value="filters">Filters &amp; Cartridges</option>
-                      <option value="spares">Spare Parts</option>
-                    </select>
+                      onChange={(val) => setFormCategory(val as ProductCategory)}
+                      options={[
+                        { value: 'purifiers', label: 'Purifiers', icon: '💧' },
+                        { value: 'dispensers', label: 'Dispensers', icon: '🏢' },
+                        { value: 'pumps', label: 'Booster Pumps', icon: '⚡' },
+                        { value: 'filters', label: 'Filters & Cartridges', icon: '🔬' },
+                        { value: 'spares', label: 'Spare Parts', icon: '🔧' },
+                      ]}
+                    />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -2552,12 +2603,12 @@ ${postSpecs}
             <div className="modal-content-area">
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>Customer: {inspectingOrder.shippingAddress.fullName}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{inspectingOrder.userEmail}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Phone: {inspectingOrder.shippingAddress.phone}</div>
+                  <div style={{ fontWeight: 700 }}>Customer: {inspectingOrder.shippingAddress?.fullName || 'Customer'}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{inspectingOrder.userEmail || 'No email'}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Phone: {inspectingOrder.shippingAddress?.phone || 'N/A'}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--primary)' }}>₹{inspectingOrder.totalAmount.toLocaleString('en-IN')}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--primary)' }}>₹{(inspectingOrder.totalAmount || 0).toLocaleString('en-IN')}</div>
                   <div style={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Method: {inspectingOrder.paymentMethod}</div>
                 </div>
               </div>
@@ -2565,8 +2616,8 @@ ${postSpecs}
               <div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px' }}>Delivery Destination:</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {inspectingOrder.shippingAddress.street}, {inspectingOrder.shippingAddress.city},{' '}
-                  {inspectingOrder.shippingAddress.state} - {inspectingOrder.shippingAddress.postalCode}
+                  {inspectingOrder.shippingAddress?.street || ''}, {inspectingOrder.shippingAddress?.city || ''},{' '}
+                  {inspectingOrder.shippingAddress?.state || ''} - {inspectingOrder.shippingAddress?.postalCode || ''}
                 </div>
               </div>
 
