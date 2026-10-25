@@ -18,7 +18,7 @@ export const FloatingBottomNav: React.FC = () => {
   const { activeTab, setActiveTab, cartCount, orders, serviceBookings } = useShop();
 
   const navItems: NavItem[] = [
-    { id: 'catalogue', label: 'Shop', icon: '🏪' },
+    { id: 'catalogue', label: 'Shop', icon: '🛍️' },
     { id: 'cart', label: 'Cart', icon: '🛒', badgeCount: cartCount },
     { id: 'orders', label: 'Orders', icon: '📦', badgeCount: orders.length },
     { id: 'services', label: 'Service', icon: '🔧', badgeCount: serviceBookings.length },

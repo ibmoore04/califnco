@@ -29,12 +29,12 @@ import { UserProfile, Order, Product, DealerProfile, ServiceBooking } from '@sha
  * Safe for Expo Go and client builds. Never embed private service account keys here.
  */
 export const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDFLbddOmzweqt0lsBhVcTW1G2b_fdj6NU',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'califnco-assignment-d989e.firebaseapp.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'califnco-assignment-d989e',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'califnco-assignment-d989e.firebasestorage.app',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '952118787903',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:952118787903:android:bfba740f2ac042ed7e9d8a',
 };
 
 /**
